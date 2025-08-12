@@ -16,13 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class DeepSeekEngine(BaseLLMEngine):
-    """DeepSeek R1 engine implementation."""
-    
     def __init__(self):
-        super().__init__("deepseek_r1", priority=30)  # Third priority
+        super().__init__("deepseek_r1", priority=30)
         self.api_key = None
-        self.base_url = "https://api.deepseek.com/v1"
-        self.model = "deepseek-reasoner"
+        self.base_url = "https://api.together.xyz/v1"  # Changed from deepseek.com
+        self.model = "meta-llama/Llama-3.3-70B-Instruct-Turbo"  # Together.ai model
         
     def initialize(self, config: Dict[str, Any]) -> bool:
         """Initialize DeepSeek client."""

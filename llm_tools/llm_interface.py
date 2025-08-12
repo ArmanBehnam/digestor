@@ -1,7 +1,7 @@
 from openai import OpenAI
 import re
 import logging
-
+from typing import List, Dict, Any
 from .llm_engines import LLMRegistry
 from .prompt_engineer import PromptEngineer
 
@@ -312,3 +312,49 @@ class LLMInterface:
         - For codes, include year if present (e.g., "IBC 2018")
         - For numeric values, include units if specified (e.g., "150 mph", "20 psf")
         """
+
+    # Add to llm_interface.py
+    def process_questions_by_domain(self, page_text: str, questions: List[str]) -> Dict[str, Any]:
+        """Process questions in parallel by engineering domain"""
+
+        # Domain question mapping (0-indexed)
+        domain_groups = {
+            'building_codes': [0, 1, 2],  # Q1-Q3
+            'deflection': [3, 4, 5, 6, 7, 8],  # Q4-Q9
+            'wind_loads': [9, 10, 11, 12],  # Q10-Q13
+            'gravity_loads': [13, 14],  # Q14-Q15
+            'snow_loads': [15, 16, 17, 18, 19],  # Q16-Q20
+            'seismic': [20, 21, 22, 23, 24]  # Q21-Q25
+        }
+
+        # Process each domain group in parallel
+        import asyncio
+        async def process_domain_group(domain, indices):
+            domain_questions = [questions[i] for i in indices if i < len(questions)]
+            if not domain_questions:
+                return {}
+
+            # Use existing prompt engineering with domain context
+            enhanced_prompt = self.prompt_engineer.optimize_prompt(page_text, domain_questions)
+            return self.llm_registry.answer_questions_with_fallback(page_text, domain_questions)
+
+        # Run domains in parallel
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        tasks = []
+        for domain, indices in domain_groups.items():
+            task = process_domain_group(domain, indices)
+            tasks.append((domain, task))
+
+        # Collect results
+        all_answers = {}
+        for domain, task in tasks:
+            try:
+                domain_answers = loop.run_until_complete(task)
+                all_answers.update(domain_answers)
+            except Exception as e:
+                print(f"Domain {domain} failed: {e}")
+
+        loop.close()
+        return all_answers

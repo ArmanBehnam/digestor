@@ -10,6 +10,7 @@ from llm_tools.result_writer import ResultWriter
 from llm_tools.postprocessor import PostProcessor
 from llm_tools.utils import run_pipeline_per_project
 
+
 def apply_deflection_defaults(answers, questions, config):
     """
     Apply default deflection values for deflection-related questions if not found in OCR.
@@ -26,24 +27,24 @@ def apply_deflection_defaults(answers, questions, config):
     except FileNotFoundError:
         print("Warning: deflection_defaults.csv not found. Skipping default application.")
         return answers
-    
+
     # Debug: Print the incoming answers format
     print(f"📋 Processing {len(answers)} answers, Questions: {len(questions)}")
     if answers:
         first_key = list(answers.keys())[0]
         print(f"   Sample answer format: {first_key} -> {type(answers[first_key])}")
-    
+
     # Process each answer
     processed_answers = {}
     defaults_applied = 0
-    
+
     for i, question in enumerate(questions):
-        qid = f"Q{i+1}"
-        print(f"\n🔍 Processing Q{i+1}: {question[:50]}...")
-        
+        qid = f"Q{i + 1}"
+        print(f"\n🔍 Processing Q{i + 1}: {question[:50]}...")
+
         if qid in answers:
             answer_data = answers[qid]
-            
+
             # Handle both old format (string) and new format (dict)
             if isinstance(answer_data, str):
                 answer_text = answer_data
@@ -53,16 +54,17 @@ def apply_deflection_defaults(answers, questions, config):
                 answer_text = answer_data.get('answer', 'Not Found')
                 page_info = answer_data.get('page', None)
                 confidence = answer_data.get('confidence', 0)
-            
+
             print(f"   📄 Original answer: '{answer_text}'")
-            
+
             # Check if this is a deflection question and answer was not found
-            answer_not_found = answer_text.lower() in ['not found', 'nan', '', 'error'] or answer_text.startswith('Error')
+            answer_not_found = answer_text.lower() in ['not found', 'nan', '', 'error'] or answer_text.startswith(
+                'Error')
             question_has_default = question in deflection_defaults
-            
+
             print(f"   🔍 Answer not found: {answer_not_found}")
             print(f"   🎯 Question has default: {question_has_default}")
-            
+
             if answer_not_found and question_has_default:
                 # Apply default value for deflection questions only
                 processed_answers[qid] = {
@@ -91,9 +93,10 @@ def apply_deflection_defaults(answers, questions, config):
                 'confidence': 0,
                 'source': 'Missing'
             }
-    
+
     print(f"\n🎯 DEFLECTION DEFAULTS SUMMARY: Applied {defaults_applied} defaults out of {len(questions)} questions")
     return processed_answers
+
 
 def process_llm_with_utils(data_dir, config):
     """
@@ -101,27 +104,28 @@ def process_llm_with_utils(data_dir, config):
     """
     print("🤖 LLM PROCESSING MODE - Using Optimized Utils with Hierarchical Engines")
     print("=" * 60)
-    
+
     # Run per-project processing with optimized utils
     results = run_pipeline_per_project(data_dir=data_dir, verbose=True)
-    
+
     if results:
         stats = results['overall_stats']
         print(f"\n🎯 FINAL RESULTS: {results['overall_success_rate']:.1f}% overall success rate")
         print(f"🏗️ Projects: {stats['successful_projects']}/{stats['total_projects']} processed successfully")
         print(f"📊 {stats['total_answers']}/{stats['total_questions']} questions answered across all projects")
         print(f"💾 Results saved in respective project folders")
-        
+
         # Optional: Show results by project
         if results['project_results']:
             print("\n🏆 RESULTS BY PROJECT:")
             for project_name, project_data in results['project_results'].items():
                 metrics = project_data['metrics']
                 print(f"\n📁 {project_name}:")
-                print(f"   ✅ {metrics['success_rate']:.1f}% success ({metrics['successful_answers']}/{metrics['total_questions']})")
+                print(
+                    f"   ✅ {metrics['success_rate']:.1f}% success ({metrics['successful_answers']}/{metrics['total_questions']})")
                 print(f"   📄 {len(project_data['combined_pages'])} pages processed")
                 print(f"   💾 Results: {project_data['output_path']}")
-        
+
         return True
     else:
         print("❌ No results generated")
@@ -165,10 +169,10 @@ def process_project(project_folder, config, questions, mode, llm):
                 result = json.load(f)
             for page in result.get('filtered_pages_only', []):
                 answers = llm.answer_page(page.get('extracted_text', ''), questions)
-                
+
                 # Process answers and apply deflection defaults if needed
                 processed_answers = apply_deflection_defaults(answers, questions, config)
-                
+
                 all_results.append({
                     'project': os.path.basename(project_folder),
                     'pdf': os.path.basename(pdf_file),
@@ -177,13 +181,14 @@ def process_project(project_folder, config, questions, mode, llm):
                 })
     return all_results
 
+
 def main():
     try:
         config = ConfigLoader.load("llm_tools/config.yaml")
     except Exception as e:
         print(f"Error loading config: {e}")
         return
-    
+
     # Set AWS environment variables if they exist in config
     if 'AWS_ACCESS_KEY_ID' in config:
         os.environ["AWS_ACCESS_KEY_ID"] = config['AWS_ACCESS_KEY_ID']
@@ -191,7 +196,7 @@ def main():
         os.environ["AWS_SECRET_ACCESS_KEY"] = config['AWS_SECRET_ACCESS_KEY']
     if 'AWS_DEFAULT_REGION' in config:
         os.environ["AWS_DEFAULT_REGION"] = config['AWS_DEFAULT_REGION']
-    
+
     # Set Azure environment variables for ocr_tools
     if 'AZURE_ENDPOINT' in config:
         os.environ["AZURE_ENDPOINT"] = config['AZURE_ENDPOINT']
@@ -199,16 +204,16 @@ def main():
         os.environ["AZURE_API_KEY"] = config['AZURE_API_KEY']
 
     data_dir = input("Enter the main data directory: ").strip().strip('"\'')
-    
+
     # Validate data directory exists
     if not os.path.exists(data_dir):
         print(f"Error: Directory '{data_dir}' does not exist.")
         return
-    
+
     if not os.path.isdir(data_dir):
         print(f"Error: '{data_dir}' is not a directory.")
         return
-    
+
     print("Select mode:")
     print("1. OCR only (generate *_result.json for each PDF)")
     print("2. LLM only (use optimized utils for per-project processing)")
@@ -240,22 +245,22 @@ def main():
         print("   📝 Standard generic prompts")
         print("   🔧 Simple and predictable")
         print()
-        
+
         prompt_choice = input("Choose prompt type (1=Automatic, 2=Static) [1]: ").strip()
-        
+
         if prompt_choice == "2":
             config['prompt_engineering']['enabled'] = False
             print("📝 Using static prompts (traditional mode)")
         else:
             config['prompt_engineering']['enabled'] = True
             print("🔧 Using automatic prompt engineering (optimized mode)")
-            
+
             # Optional: Ask for optimization level
             print("\nOptimization level:")
             print("1. Conservative (fast, minimal optimization)")
             print("2. Balanced (recommended, good performance/quality)")
             print("3. Aggressive (maximum optimization, slower)")
-            
+
             level_choice = input("Choose level (1/2/3) [2]: ").strip()
             if level_choice == "1":
                 config['prompt_engineering']['optimization_level'] = "conservative"
@@ -266,7 +271,7 @@ def main():
             else:
                 config['prompt_engineering']['optimization_level'] = "balanced"
                 print("⚖️ Using balanced optimization")
-        
+
         print()  # Add spacing before next section
 
     # Handle LLM-only mode with optimized utils
@@ -281,7 +286,7 @@ def main():
                 print(f"   • {stat['engine_name']} (Priority: {stat['priority']}) - {status}")
                 if stat['last_error']:
                     print(f"     ⚠️ Last Error: {stat['last_error']}")
-            
+
             # Show prompt engineering status
             print("\n🔧 PROMPT ENGINEERING STATUS:")
             pe_stats = llm_test.prompt_engineer.get_optimization_stats()
@@ -298,40 +303,40 @@ def main():
             print()
         except Exception as e:
             print(f"⚠️ Could not get LLM engine status: {e}")
-        
+
         success = process_llm_with_utils(data_dir, config)
         if success:
             print("\n✅ LLM processing completed successfully!")
         else:
             print("\n❌ LLM processing failed!")
         return
-    
+
     # Handle "both" mode - check if JSON files exist, skip OCR if they do
     if mode == "both":
         # Check if JSON files already exist for all projects
         json_files_exist = True
         projects_with_json = []
         projects_without_json = []
-        
+
         for project in os.listdir(data_dir):
             project_folder = os.path.join(data_dir, project)
             if os.path.isdir(project_folder):
                 pdf_files = [f for f in os.listdir(project_folder) if f.lower().endswith('.pdf')]
                 json_files = [f for f in os.listdir(project_folder) if f.endswith('_ocr_result.json')]
-                
+
                 if pdf_files and json_files:
                     projects_with_json.append(project)
                 elif pdf_files:
                     projects_without_json.append(project)
                     json_files_exist = False
-        
+
         if projects_without_json:
             print(f"\n🔧 PHASE 1: OCR PROCESSING")
             print("=" * 40)
             print(f"📁 Found {len(projects_without_json)} projects needing OCR processing:")
             for proj in projects_without_json:
                 print(f"   • {proj}")
-            
+
             # Run OCR processing only for projects that need it
             questions = config['questions']
             all_results = []
@@ -346,16 +351,16 @@ def main():
                 except Exception as e:
                     print(f"❌ Error during OCR processing for project {project_folder}: {e}")
                     continue
-            
+
             print(f"\n✅ OCR processing completed for {len(projects_without_json)} projects.")
         else:
             print(f"\n✅ SKIPPING OCR: All {len(projects_with_json)} projects already have JSON files")
             for proj in projects_with_json:
                 print(f"   • {proj}")
-        
+
         print("\n🤖 PHASE 2: LLM PROCESSING")
         print("=" * 40)
-        
+
         # Show LLM engine and prompt engineering status before processing
         try:
             llm_test = LLMInterface(config)
@@ -366,7 +371,7 @@ def main():
                 print(f"   • {stat['engine_name']} (Priority: {stat['priority']}) - {status}")
                 if stat['last_error']:
                     print(f"     ⚠️ Last Error: {stat['last_error']}")
-            
+
             # Show prompt engineering status
             print("\n🔧 PROMPT ENGINEERING STATUS:")
             pe_stats = llm_test.prompt_engineer.get_optimization_stats()
@@ -383,7 +388,7 @@ def main():
             print()
         except Exception as e:
             print(f"⚠️ Could not get LLM status: {e}")
-        
+
         # Now run LLM processing with optimized utils
         success = process_llm_with_utils(data_dir, config)
         if success:
@@ -413,6 +418,7 @@ def main():
                 continue
 
     print(f"✅ OCR processing completed. Total results: {len(all_results)}")
+
 
 if __name__ == "__main__":
     main()
