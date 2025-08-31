@@ -1,0 +1,26 @@
+question_number,question,answer,page,source_document,confidence,pages_searched,timestamp,source
+1,"What building code is referenced (e.g., IBC, NYSBC, NYCBC, Chicago Building Code)?","The building code referenced is the ""Michigan (International) Building Code 2015.""",14 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.232784,OCR
+2,What version or year of the building code is used?,The building code used is the Michigan (International) Building Code 2015.,14 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.238255,OCR
+3,"Is an ASCE 7 standard mentioned? If so, which version (e.g., ASCE 7-10, 7-16)?","Yes, the ASCE 7 standard is mentioned. The version specified is ASCE 7-10.",10 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.240946,OCR
+4,What are the exterior wall deflection limits?,L/240,deflection_defaults.csv,Default,95,5,2025-08-14T15:46:12.264147,deflection_defaults.csv
+5,What is the interior wall deflection limit?,L/240,deflection_defaults.csv,Default,95,5,2025-08-14T15:46:12.290520,deflection_defaults.csv
+6,What is the floor joist framing deflection limit?,L/360,deflection_defaults.csv,Default,95,5,2025-08-14T15:46:12.498007,deflection_defaults.csv
+7,What is the roof rafter framing deflection limit?,L/240,deflection_defaults.csv,Default,95,5,2025-08-14T15:46:12.544161,deflection_defaults.csv
+8,What is the ceiling joist framing deflection limit?,L/240,deflection_defaults.csv,Default,95,5,2025-08-14T15:46:12.647722,deflection_defaults.csv
+9,What is the maximum primary structure vertical deflection due to live load?,L/240,deflection_defaults.csv,Default,95,5,2025-08-14T15:46:12.697073,deflection_defaults.csv
+10,What is the basic wind speed (in mph)? Is it listed as ASD or Strength level?,"The basic wind speed is 120 mph, listed at the Strength level.",18 (from a only thru add 1 - quote),a only thru add 1 - quote,95,5,2025-08-14T15:46:12.699902,OCR
+11,"What is the building risk category (e.g., I, II, III)?","The document does not specify the building risk category (e.g., I, II, III).",1 (from 5400 from spec book),5400 from spec book,0,5,2025-08-14T15:46:12.701359,OCR
+12,"What is the exposure category (e.g., B, C)?",B,18 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.704193,OCR
+13,What is the internal pressure coefficient (GCpi)?,± 0.18,1 (from a only thru add 1 - quote),a only thru add 1 - quote,90,5,2025-08-14T15:46:12.706967,OCR
+14,What is the roof live load?,The roof live load is 22 PSF.,9 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.710301,OCR
+15,What is the roof dead load?,The roof dead load is 22 PSF.,9 (from a only thru add 1 - quote),a only thru add 1 - quote,90,5,2025-08-14T15:46:12.713034,OCR
+16,What is the ground snow load (Pg)?,25 PSF,21 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.751302,OCR
+17,What is the snow load importance factor (Is)?,The snow load importance factor (Is) is 1.1.,9 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.791861,OCR
+18,What is the snow load exposure factor (Ce)?,The snow load exposure factor (Ce) is 1.0.,9 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.830677,OCR
+19,What is the thermal factor (Ct)?,The thermal factor (Ct) is 1.0.,8 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.865189,OCR
+20,What is the flat roof snow load (Pf)?,The flat roof snow load (Pf) is 25 PSF.,9 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.899781,OCR
+21,"What is the seismic design category (e.g., A, B, C)?",B,3 (from 5400 from spec book),5400 from spec book,90,1,2025-08-14T15:46:12.902567,OCR
+22,What is the seismic importance factor (Ie)?,The seismic importance factor (Ie) is 1.25.,8 (from a only thru add 1 - quote),a only thru add 1 - quote,100,5,2025-08-14T15:46:12.939733,OCR
+23,What is the component importance factor (Ip)?,Not Found,6 (from a only thru add 1 - quote),a only thru add 1 - quote,0,5,2025-08-14T15:46:13.131148,Not Found in Document
+24,"What is the site class (e.g., D, E, F)?",Site Class: D,1 (from 5400 from spec book),5400 from spec book,90,1,2025-08-14T15:46:13.141836,OCR
+25,What are the values of Sds and Sd1?,"Sds = 0.100 g, Sd1 = 0.075 g",1 (from 5400 from spec book),5400 from spec book,100,1,2025-08-14T15:46:13.146637,OCR

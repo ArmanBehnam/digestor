@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class AzureOCREngine(BaseOCREngine):
 
     def __init__(self):
-        super().__init__("azure_ocr", priority=1)
+        super().__init__("azure_ocr", priority=50)
         self._azure_client = None
         self._initialize_client()
 

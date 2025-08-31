@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class ClaudeOCREngine(BaseOCREngine):
     def __init__(self):
-        super().__init__("claude_ocr", priority=8)
+        super().__init__("claude_ocr", priority=5)
         self._client = None
         self._initialize_client()
 

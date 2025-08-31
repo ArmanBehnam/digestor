@@ -1,0 +1,243 @@
+{
+  "document_info": {
+    "document_id": "4931315d-14ff-48ca-8883-e14233a37ba2",
+    "filename": "5400 from spec book.pdf",
+    "total_pages": 4,
+    "processing_time": 68.53469896316528,
+    "confidence": 0.76,
+    "document_type": "general_construction_document"
+  },
+  "processing_summary": {
+    "questions_total": 25,
+    "questions_answered": 25,
+    "defaults_applied": 6,
+    "timestamp": "20250819_145610"
+  },
+  "results": [
+    {
+      "Question_Number": 1,
+      "Question": "What building code is referenced (e.g., IBC, NYSBC, NYCBC, Chicago Building Code)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 2,
+      "Question": "What version or year of the building code is used?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 3,
+      "Question": "Is an ASCE 7 standard mentioned? If so, which version (e.g., ASCE 7-10, 7-16)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 4,
+      "Question": "What are the exterior wall deflection limits?",
+      "Answer": "L/240",
+      "Page": "Default",
+      "Confidence": "95%",
+      "Source": "deflection_defaults.csv",
+      "Deflection_Default": "Applied"
+    },
+    {
+      "Question_Number": 5,
+      "Question": "What is the interior wall deflection limit?",
+      "Answer": "L/240",
+      "Page": "Default",
+      "Confidence": "95%",
+      "Source": "deflection_defaults.csv",
+      "Deflection_Default": "Applied"
+    },
+    {
+      "Question_Number": 6,
+      "Question": "What is the floor joist framing deflection limit?",
+      "Answer": "L/360",
+      "Page": "Default",
+      "Confidence": "95%",
+      "Source": "deflection_defaults.csv",
+      "Deflection_Default": "Applied"
+    },
+    {
+      "Question_Number": 7,
+      "Question": "What is the roof rafter framing deflection limit?",
+      "Answer": "L/240",
+      "Page": "Default",
+      "Confidence": "95%",
+      "Source": "deflection_defaults.csv",
+      "Deflection_Default": "Applied"
+    },
+    {
+      "Question_Number": 8,
+      "Question": "What is the ceiling joist framing deflection limit?",
+      "Answer": "L/240",
+      "Page": "Default",
+      "Confidence": "95%",
+      "Source": "deflection_defaults.csv",
+      "Deflection_Default": "Applied"
+    },
+    {
+      "Question_Number": 9,
+      "Question": "What is the maximum primary structure vertical deflection due to live load?",
+      "Answer": "L/240",
+      "Page": "Default",
+      "Confidence": "95%",
+      "Source": "deflection_defaults.csv",
+      "Deflection_Default": "Applied"
+    },
+    {
+      "Question_Number": 10,
+      "Question": "What is the basic wind speed (in mph)? Is it listed as ASD or Strength level?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 11,
+      "Question": "What is the building risk category (e.g., I, II, III)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 12,
+      "Question": "What is the exposure category (e.g., B, C)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 13,
+      "Question": "What is the internal pressure coefficient (GCpi)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 14,
+      "Question": "What is the roof live load?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 15,
+      "Question": "What is the roof dead load?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 16,
+      "Question": "What is the ground snow load (Pg)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 17,
+      "Question": "What is the snow load importance factor (Is)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 18,
+      "Question": "What is the snow load exposure factor (Ce)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 19,
+      "Question": "What is the thermal factor (Ct)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 20,
+      "Question": "What is the flat roof snow load (Pf)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 21,
+      "Question": "What is the seismic design category (e.g., A, B, C)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 22,
+      "Question": "What is the seismic importance factor (Ie)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 23,
+      "Question": "What is the component importance factor (Ip)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 24,
+      "Question": "What is the site class (e.g., D, E, F)?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 25,
+      "Question": "What are the values of Sds and Sd1?",
+      "Answer": "Error: Connection error.",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "Not Found in Document",
+      "Deflection_Default": ""
+    }
+  ]
+}

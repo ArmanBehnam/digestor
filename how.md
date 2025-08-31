@@ -1,4 +1,6 @@
-# LangChain Multi-Agent Architecture
+# Digetor v1.1
+
+LangChain Multi-Agent Architecture
 
 ## **System Flow**
 
@@ -28,6 +30,8 @@ pip install pydantic python-dotenv
 
 # Install existing requirements
 pip install -r requirements.txt
+
+$env:PYTHONPATH = "$PWD;$PWD\llm_tools;$PWD\ocr_tools"
 ```
 
 ### **Step 2: Command Line Interface**

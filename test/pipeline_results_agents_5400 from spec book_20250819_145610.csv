@@ -1,0 +1,26 @@
+Question_Number,Question,Answer,Page,Confidence,Source,Deflection_Default
+1,"What building code is referenced (e.g., IBC, NYSBC, NYCBC, Chicago Building Code)?",Error: Connection error.,1,0%,Not Found in Document,
+2,What version or year of the building code is used?,Error: Connection error.,1,0%,Not Found in Document,
+3,"Is an ASCE 7 standard mentioned? If so, which version (e.g., ASCE 7-10, 7-16)?",Error: Connection error.,1,0%,Not Found in Document,
+4,What are the exterior wall deflection limits?,L/240,Default,95%,deflection_defaults.csv,Applied
+5,What is the interior wall deflection limit?,L/240,Default,95%,deflection_defaults.csv,Applied
+6,What is the floor joist framing deflection limit?,L/360,Default,95%,deflection_defaults.csv,Applied
+7,What is the roof rafter framing deflection limit?,L/240,Default,95%,deflection_defaults.csv,Applied
+8,What is the ceiling joist framing deflection limit?,L/240,Default,95%,deflection_defaults.csv,Applied
+9,What is the maximum primary structure vertical deflection due to live load?,L/240,Default,95%,deflection_defaults.csv,Applied
+10,What is the basic wind speed (in mph)? Is it listed as ASD or Strength level?,Error: Connection error.,1,0%,Not Found in Document,
+11,"What is the building risk category (e.g., I, II, III)?",Error: Connection error.,1,0%,Not Found in Document,
+12,"What is the exposure category (e.g., B, C)?",Error: Connection error.,1,0%,Not Found in Document,
+13,What is the internal pressure coefficient (GCpi)?,Error: Connection error.,1,0%,Not Found in Document,
+14,What is the roof live load?,Error: Connection error.,1,0%,Not Found in Document,
+15,What is the roof dead load?,Error: Connection error.,1,0%,Not Found in Document,
+16,What is the ground snow load (Pg)?,Error: Connection error.,1,0%,Not Found in Document,
+17,What is the snow load importance factor (Is)?,Error: Connection error.,1,0%,Not Found in Document,
+18,What is the snow load exposure factor (Ce)?,Error: Connection error.,1,0%,Not Found in Document,
+19,What is the thermal factor (Ct)?,Error: Connection error.,1,0%,Not Found in Document,
+20,What is the flat roof snow load (Pf)?,Error: Connection error.,1,0%,Not Found in Document,
+21,"What is the seismic design category (e.g., A, B, C)?",Error: Connection error.,1,0%,Not Found in Document,
+22,What is the seismic importance factor (Ie)?,Error: Connection error.,1,0%,Not Found in Document,
+23,What is the component importance factor (Ip)?,Error: Connection error.,1,0%,Not Found in Document,
+24,"What is the site class (e.g., D, E, F)?",Error: Connection error.,1,0%,Not Found in Document,
+25,What are the values of Sds and Sd1?,Error: Connection error.,1,0%,Not Found in Document,

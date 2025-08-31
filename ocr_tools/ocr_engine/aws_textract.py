@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class AWSTextractEngine(BaseOCREngine):
 
     def __init__(self):
-        super().__init__("aws_textract", priority=10)  # High priority
+        super().__init__("aws_textract", priority=1)  # High priority
         self._textract_client = None
         self._initialize_client()
 

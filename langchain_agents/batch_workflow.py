@@ -3,6 +3,12 @@ import argparse
 from pathlib import Path
 from workflow import Talk2DrawingsWorkflow
 
+import os
+os.environ.setdefault("AZURE_ENDPOINT", "https://ocr-document-cde.cognitiveservices.azure.com/")
+os.environ.setdefault("AZURE_API_KEY", "1YOi3XppiUJNkPqimlGKtVsybyr3vxaZOZyQ353oOXt5OxA32fHVJQQJ99BGACYeBjFXJ3w3AAALACOG4WOR")
+os.environ.setdefault("AWS_ACCESS_KEY_ID", "AKIA3U3RKYD6JK4EUIGC")
+os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "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")
+os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 
 async def process_directory(directory_path, prompt_engineering=True):
     dir_path = Path(directory_path)

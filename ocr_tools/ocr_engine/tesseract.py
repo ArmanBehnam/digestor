@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class TesseractEngine(BaseOCREngine):
 
     def __init__(self):
-        super().__init__("tesseract", priority=20)  # Medium priority
+        super().__init__("tesseract", priority=10)  # Medium priority
         self._pytesseract = None
         self._initialize_tesseract()
 

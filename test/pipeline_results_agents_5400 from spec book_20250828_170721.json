@@ -1,0 +1,243 @@
+{
+  "document_info": {
+    "document_id": "cb60c594-42c6-4f4d-ad60-a23b53130422",
+    "filename": "5400 from spec book.pdf",
+    "total_pages": 4,
+    "processing_time": 12.973171949386597,
+    "confidence": 0.798,
+    "document_type": "general_construction_document"
+  },
+  "processing_summary": {
+    "questions_total": 25,
+    "questions_answered": 25,
+    "defaults_applied": 0,
+    "timestamp": "20250828_170721"
+  },
+  "results": [
+    {
+      "Question_Number": 1,
+      "Question": "What building code and year of the building code is referenced (e.g., IBC, NYSBC, NYCBC, Chicago Building Code)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 2,
+      "Question": "Is an ASCE 7 standard mentioned? If so, which version (e.g., ASCE 7-10, 7-16)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 3,
+      "Question": "What are the exterior wall deflection limits?",
+      "Answer": "Maximum horizontal deflection under wind load of 1/720 of span for walls with masonry veneer; 1/360 of span for all walls without masonry veneer.",
+      "Page": "2",
+      "Confidence": "100%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 4,
+      "Question": "What is the interior wall deflect  ion limit?",
+      "Answer": "Maximum horizontal deflection under a horizontal load of 5 psf shall be 1/720 of span for walls with masonry veneer; 1/240 of span for all walls without masonry veneer.",
+      "Page": "2",
+      "Confidence": "100%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 5,
+      "Question": "What is the floor joist framing deflection limit?",
+      "Answer": "Maximum vertical deflection under live load of 1/480 of span.",
+      "Page": "2",
+      "Confidence": "100%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 6,
+      "Question": "What is the roof rafter framing deflection limit?",
+      "Answer": "Maximum vertical deflection under live load of 1/360 of span.",
+      "Page": "2",
+      "Confidence": "100%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 7,
+      "Question": "What is the ceiling joist framing deflection limit?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 8,
+      "Question": "What is the maximum primary structure vertical deflection due to live load?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 9,
+      "Question": "What is the basic wind speed (in mph)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 10,
+      "Question": "What is the building risk category (e.g., I, II, III)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 11,
+      "Question": "What is the exposure category (e.g., B, C)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 12,
+      "Question": "What is the internal pressure coefficient (GCpi)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 13,
+      "Question": "What is the roof live load?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 14,
+      "Question": "What is the roof dead load?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 15,
+      "Question": "What is the ground snow load (Pg)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 16,
+      "Question": "What is the snow load importance factor (Is)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 17,
+      "Question": "What is the snow load exposure factor (Ce)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 18,
+      "Question": "What is the thermal factor (Ct)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 19,
+      "Question": "What is the flat roof snow load (Pf)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 20,
+      "Question": "What is the seismic design category (e.g., A, B, C)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 21,
+      "Question": "What is the seismic importance factor (Ie)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 22,
+      "Question": "What is the component importance factor (Ip)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 23,
+      "Question": "What is the site class (e.g., D, E, F)?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 24,
+      "Question": "What is the value of Sds ?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    },
+    {
+      "Question_Number": 25,
+      "Question": "What is the value of Sd1?",
+      "Answer": "N/A",
+      "Page": 1,
+      "Confidence": "0%",
+      "Source": "OCR",
+      "Deflection_Default": ""
+    }
+  ]
+}
