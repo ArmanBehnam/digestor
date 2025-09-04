@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Digetor v1.2
 
 LangChain Multi-Agent Architecture with Validation & Quality Control Release
@@ -12,11 +13,30 @@ graph TD
     E --> V[Validation Agent]
     V --> F[Orchestrator Agent]
     F --> G[Results CSV/JSON + Validated CSV]
+=======
+# Digetor v1.1
+
+LangChain Multi-Agent Architecture
+
+## **System Flow**
+
+```mermaid
+graph TD
+    A[PDF Input] --> B[OCR Agent]
+    B --> C[Content Extractor Agent]
+    C --> D[Page Filter Agent]
+    D --> E[Engineering QA Agent]
+    E --> F[Orchestrator Agent]
+    F --> G[Results CSV/JSON]
+>>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
     
     H[User Config] --> F
     I[LLM Engines] --> E
     J[Prompt Engineering] --> E
+<<<<<<< HEAD
     K[limits.json] --> V
+=======
+>>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
 ```
 
 
@@ -37,6 +57,7 @@ $env:PYTHONPATH = "$PWD;$PWD\llm_tools;$PWD\ocr_tools"
 
 ### **Step 2: Command Line Interface**
 ```bash
+<<<<<<< HEAD
 python merged_batch_workflow.py --directory "path/to/pdfs" --prompt-engineering
 
 # OCR Only:
@@ -85,6 +106,59 @@ Validation Results: 13 OK, 8 FAIL, 4 SKIP
 Processing Time: ~2 minutes per batch
 OCR Confidence: 0.76 average
 ```
+=======
+# Standard processing (individual PDFs)
+python batch_workflow.py --directory "path/to/pdfs"
+
+# Merged JSON processing (more efficient)
+python merged_batch_workflow.py --directory "path/to/pdfs" --prompt-engineering
+```
+
+## **Key Innovations & Advancements**
+
+### **1. Merged JSON Processing**
+- **Process all PDFs through OCR first**
+- **Merge JSON results from multiple documents**
+- **Single LLM call on combined data for efficiency**
+- **Cross-document analysis capability**
+
+### **2. Hierarchical Engine System**
+- **OCR Engines**: AWS Textract, Azure, Claude, Tesseract (priority-based fallback)
+- **LLM Engines**: GPT-4o (800k TPM), Claude Sonnet 4, DeepSeek R1 (automatic fallback)
+- **Smart Failure Recovery**: Automatic engine switching on rate limits/failures
+
+### **3. Engineering Domain Expertise**
+- **80+ Engineering Patterns**: Building codes, materials, structural elements
+- **26 Domain Questions**: Covers all major engineering disciplines
+- **Automatic Deflection Defaults**: L/240, L/360 criteria applied intelligently
+- **Technical Precision**: Units, ratios, code years preserved
+
+## **System Performance & Results on Test case 1**
+
+### **Latest Test Results (100% Success Rate)**
+```bash
+BATCH SUMMARY: 3/3 PDFs processed successfully
+Total Pages Processed: 53 pages across 3 engineering documents
+Questions Answered: 75 total (25 questions × 3 PDFs)
+Processing Time: ~5 minutes average per document
+Deflection Defaults: 3 applied automatically
+OCR Confidence: 0.74 average
+```
+### **Processing Times**
+| Document Type | Pages | OCR Time | LLM Time | Total Time |
+|---------------|-------|----------|----------|------------|
+| Spec Book | 4 pages | 0.94s | 6.7s | ~8s |
+| Quote Document | 35 pages | 229s | 12s | ~4 min |
+| Structural Plans | 14 pages | 297s | 11s | ~5 min |
+
+### **Success Rates**
+- **Overall Success**: 100% (3/3 PDFs)
+- **OCR Accuracy**: 74% average confidence
+- **Question Coverage**: 100% (25/25 questions answered)
+- **Deflection Defaults**: Applied when needed (3/25 questions)
+
+
+>>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
 
 ## **Production Deployment**
 
@@ -95,12 +169,20 @@ langchain_agents/
 │   ├── base_agent.py          # LangChain base class
 │   ├── ocr_agent.py           # Multi-engine OCR
 │   ├── qa_agent.py            # Hierarchical LLM
+<<<<<<< HEAD
 │   ├── validation_agent.py    # Range validation + unit standardization
 │   └── orchestrator_agent.py  # Main coordinator
 ├── workflow.py                # Standard processing
 ├── batch_workflow.py          # Batch processing
 ├── merged_batch_workflow.py   # Merged JSON processing
 limits.json                    # Validation rules
+=======
+│   └── orchestrator_agent.py  # Main coordinator
+├── workflow.py                # Standard processing
+├── batch_workflow.py          # Batch processing
+├── merged_batch_workflow.py   # Merged JSON (NEW)
+└── test_simple.py            # Quick testing
+>>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
 ```
 
 ## **Integration with Existing Systems**
@@ -199,6 +281,7 @@ class ContentExtractorAgent(BaseAgent):
 
 
 
+<<<<<<< HEAD
 ### **5. ValidationAgent (Quality Control)**
 - **Responsibilities**: Unit standardization and range validation
 - **Engineering Rules**: 20 validation rules from limits.json
@@ -221,6 +304,8 @@ class ValidationAgent(BaseAgent):
 ```
 
 
+=======
+>>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
 ## **LangChain Integration Details**
 
 ```python
