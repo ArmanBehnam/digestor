@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Digetor v1.2
 
 LangChain Multi-Agent Architecture with Validation & Quality Control Release
