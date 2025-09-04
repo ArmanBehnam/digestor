@@ -1,9 +1,9 @@
 {
   "document_info": {
-    "document_id": "cd309e31-13ed-4b71-99e7-82a74fed2b88",
+    "document_id": "54918f42-ae41-4008-9835-189c89b97357",
     "filename": "5400 from spec book.pdf",
     "total_pages": 4,
-    "processing_time": 13.739172220230103,
+    "processing_time": 21.92063546180725,
     "confidence": 0.798,
     "document_type": "general_construction_document"
   },
@@ -21,28 +21,28 @@
         "material_specs": [
           "Track",
           "Galvanized",
-          "C955",
           "A653/A653",
+          "C955",
           "Stud"
         ],
         "project_info": [
-          "construction tolerances, deflection of building structural members,",
-          "conditions within required limits.",
           ", fabricate, and erect to withstand specified",
-          "not less than 1/2 in vertical",
+          "conditions within required limits.",
           "ure, Inc. TMP20069",
-          "movement using slotted holes, shouldered screws or screws and anti-friction or stepped"
+          "construction tolerances, deflection of building structural members,",
+          "movement using slotted holes, shouldered screws or screws and anti-friction or stepped",
+          "not less than 1/2 in vertical"
         ],
         "structural_steel": [
-          "653",
-          "COLD-FORMED METAL FRAMING",
+          "Stud",
           "Track",
-          "Stud"
+          "653",
+          "COLD-FORMED METAL FRAMING"
         ],
         "abbreviations": [
-          "Section 01",
           "aff",
-          "COLD-FORMED METAL FRAMING"
+          "COLD-FORMED METAL FRAMING",
+          "Section 01"
         ],
         "document_type": "construction_specification",
         "document_characteristics": {

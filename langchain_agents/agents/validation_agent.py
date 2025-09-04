@@ -11,6 +11,7 @@ sys.path.append('..')
 
 class ValidationAgent(Talk2DrawingsBaseAgent):
 
+    # loads validation rules from limits.json, initializes agent
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__("Validation_Agent")
         self.config = config or {}
@@ -19,6 +20,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
 
         print(f"{self.name}: Loaded {len(self.rules)} validation rules")
 
+    # searches for and loads JSON validation rules file
     def _load_rules(self) -> Dict[str, Any]:
         try:
             limits_path = Path(self.limits_file)
@@ -34,10 +36,12 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
             print(f"Could not load limits file: {e}")
             return {}
 
+    # checks input contains results_dataframe or results data
     def validate_input(self, input_data: Any) -> bool:
         return (isinstance(input_data, dict) and
                 ('results_dataframe' in input_data or 'results' in input_data))
 
+    # main function - standardizes units, validates answers, returns status summary
     async def process(self, input_data: Dict[str, Any], context: Dict[str, Any] = None) -> Dict[str, Any]:
         try:
             if 'results_dataframe' in input_data:
@@ -86,23 +90,27 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
         except Exception as e:
             raise Exception(f"Validation processing failed: {e}")
 
+    # finds first number in text (e.g., "90 mph" to 90.0)
     def extract_first_float(self, text: str):
         if not isinstance(text, str):
             return None
         m = re.search(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?', text.replace(',', ''))
         return float(m.group()) if m else None
 
+    # finds all numbers in text (e.g., "90-110 mph" to [90.0, 110.0])
     def parse_all_floats(self, text: str):
         if not isinstance(text, str):
             return []
         return [float(x.replace(',', '')) for x in re.findall(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?', text)]
 
+    # extracts deflection divisor (e.g., "L/240" to 240.0)
     def parse_deflection(self, answer: str):
         if not isinstance(answer, str):
             return None
         m = re.search(r'[Ll]\s*/\s*(\d+(?:\.\d+)?)', answer)
         return float(m.group(1)) if m else None
 
+    # standardizes DataFrame columns (question/questions to Question)
     def normalize_colnames(self, df: pd.DataFrame):
         mapping = {}
         for c in df.columns:
@@ -121,6 +129,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
                 mapping[c] = c
         return df.rename(columns=mapping)
 
+    # checks single value within min/max (wind speed 30-300 mph)
     def evaluate_numeric_range(self, answer: str, rule: dict) -> Tuple[str, str]:
         val = self.extract_first_float(answer)
         if val is None:
@@ -134,6 +143,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
             return "FAIL", f"{val} {unit} > max {hi} {unit}"
         return "OK", f"{val} {unit} within [{lo}, {hi}]"
 
+    # passes if any value fits range (handles "90-110 mph")
     def evaluate_any_in_range(self, answer: str, rule: dict) -> Tuple[str, str]:
         vals = self.parse_all_floats(answer)
         if not vals:
@@ -145,6 +155,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
                 return "OK", f"Found {v} within [{lo}, {hi}]"
         return "FAIL", f"No values within [{lo}, {hi}] (found {vals})"
 
+    # validates deflection meets minimum strictness (L/360 > L/240)
     def evaluate_deflection_min(self, answer: str, rule: dict) -> Tuple[str, str]:
         div = self.parse_deflection(answer)
         if div is None:
@@ -156,6 +167,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
             return "OK", f"L/{int(div)} ≥ L/{int(req)}"
         return "FAIL", f"L/{int(div)} < L/{int(req)}"
 
+    # pattern matching validation (building codes)
     def evaluate_regex(self, answer: str, rule: dict) -> Tuple[str, str]:
         patt = rule.get("pattern", None)
         if not patt:
@@ -166,6 +178,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
             return "OK", "Pattern found"
         return "FAIL", "Pattern not found"
 
+    # categorical validation (risk Category II/III/IV)
     def evaluate_enum(self, answer: str, rule: dict) -> Tuple[str, str]:
         allowed = rule.get("allowed", [])
         if not allowed:
@@ -179,7 +192,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
                 return "OK", f"Found allowed value: {allowed_val}"
         return "FAIL", f"None of {allowed} found in answer"
 
-
+    # finds validation rule by matching question text
     def match_rule(self, question: str) -> Tuple[str, Dict]:
         if not isinstance(question, str):
             return None, None
@@ -190,6 +203,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
                 return rule_name, rule
         return None, None
 
+    # applies appropriate evaluator to question-answer pair
     def validate_row(self, question: str, answer: str) -> Tuple[str, str]:
         rule_key, rule = self.match_rule(question)
         if not rule:
@@ -217,6 +231,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
 
         return evaluators[rule_type](answer, rule)
 
+    # converts feet to inches, ksi to psf for consistency
     def standardize_text_units(self, text: str) -> str:
         if not isinstance(text, str):
             return text

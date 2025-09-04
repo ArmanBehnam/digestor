@@ -13,30 +13,6 @@ graph TD
     E --> V[Validation Agent]
     V --> F[Orchestrator Agent]
     F --> G[Results CSV/JSON + Validated CSV]
-=======
-# Digetor v1.1
-
-LangChain Multi-Agent Architecture
-
-## **System Flow**
-
-```mermaid
-graph TD
-    A[PDF Input] --> B[OCR Agent]
-    B --> C[Content Extractor Agent]
-    C --> D[Page Filter Agent]
-    D --> E[Engineering QA Agent]
-    E --> F[Orchestrator Agent]
-    F --> G[Results CSV/JSON]
->>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
-    
-    H[User Config] --> F
-    I[LLM Engines] --> E
-    J[Prompt Engineering] --> E
-<<<<<<< HEAD
-    K[limits.json] --> V
-=======
->>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
 ```
 
 

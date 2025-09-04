@@ -325,7 +325,7 @@ async def main():
     parser.add_argument("--directory", required=True, help="Directory containing PDF files")
     parser.add_argument("--prompt-engineering", action="store_true", default=True)
     parser.add_argument("--enable-validation", action="store_true", default=True, help="Enable validation of results")
-    parser.add_argument("--processing-mode", choices=['ocr_only', 'llm_only', 'full'],bdefault='full', help="Processing mode")
+    parser.add_argument("--processing-mode", choices=['ocr_only', 'llm_only', 'full'],default='full', help="Processing mode")
     parser.add_argument("--ocr-data-dir", help="Directory with existing OCR JSON files (for llm_only mode)")
 
     args = parser.parse_args()
