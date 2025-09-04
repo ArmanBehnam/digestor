@@ -1,0 +1,82 @@
+{
+  "document_info": {
+    "document_id": "cd309e31-13ed-4b71-99e7-82a74fed2b88",
+    "filename": "5400 from spec book.pdf",
+    "total_pages": 4,
+    "processing_time": 13.739172220230103,
+    "confidence": 0.798,
+    "document_type": "general_construction_document"
+  },
+  "filtered_pages_only": [
+    {
+      "page_number": 2,
+      "text_elements": [],
+      "table_elements": [],
+      "extracted_text": "TMP Architecture, Inc. TMP20069\n6. Steel Stud Solutions, LLC; www.steelstudsolutions.com\n7. The Steel Network, Inc: www.SteelNetwork.com.\n8. Telling Industries; www.buildstrong.com.\n9. Substitutions: See Section 01 6000 - Product Requirements.\nB. Framing Connectors and Accessories:\n1. Same manufacturer as metal framing.\n2.02 FRAMING SYSTEM\nA. Provide primary and secondary framing members, bridging, bracing, plates, gussets, clips,\nfittings, reinforcement, and fastenings as required to provide a complete framing system.\nB. Design Requirements: Provide completed framing system having the following characteristics:\n1. Design: Calculate structural characteristics of cold-formed steel framing members\naccording to AISI S100-12.\n2. Structural Performance: Design, engineer, fabricate, and erect to withstand specified\ndesign loads for project conditions within required limits.\n3. Design Loads: As indicated on the drawings.\n4. Live load deflection meeting the following, unless otherwise indicated:\na. Floors: Maximum vertical deflection under live load of 1/480 of span.\nb. Roofs: Maximum vertical deflection under live load of 1/360 of span.\nc. Exterior Walls:\n1) Maximum horizontal deflection under wind load of 1/720 of span for walls with\nmasonry veneer.\n2) Maximum horizontal deflection under wind load of 1/360 of span for all walls\nwithout masonry veneer.\nd. Interior Walls:\n1) Maximum horizontal deflection under a horizontal load of 5 psf shall be 1/720 of\nspan for walls with masonry veneer.\n2) Maximum horizontal deflection under a horizontal load of 5 psf shall be 1/240 of\nspan for all walls without masonry veneer.\ne. Design non-axial loadbearing framing to accommodate not less than 1/2 in vertical\ndeflection.\n5. Able to tolerate movement of components without damage, failure of joint seals, undue\nstress on fasteners, or other detrimental effects when subject to seasonal or cyclic\nday/night temperature ranges.\n6. Able to accommodate construction tolerances, deflection of building structural members,\nand clearances of intended openings.\n2.03 FRAMING MATERIALS\nA. Studs and Track: ASTM C955; studs formed to channel, C- or Sigma-shaped with punched\nweb; U-shaped track in matching nominal width and compatible height.\n1. Gage: Not less than 18 gage, 0.0478 inch.\n2. Depth: As indicated.\n3. Flange Width: 2 inches.\n4. Galvanized in accordance with ASTM A653/A653M, G90/Z275 coating.\nB. Framing Connectors: Factory-made, formed steel sheet.\n1. Structural Performance: Maintain load and movement capacity required by applicable\ncode, when evaluated in accordance with AISI S100-12.\n2. Movement Connections: Provide mechanical anchorage devices that accommodate\nmovement using slotted holes, shouldered screws or screws and anti-friction or stepped\nbushings, while maintaining structural performance of framing. Provide movement\nconnections where indicated on drawings.\na. Where continuous studs bypass elevated floor slab, connect stud to slab in manner\nallowing vertical and horizontal movement of slab without affecting studs; allow for\nminimum movement of 1/2 inch.\n01/30/23 CONSTRUCTION DOCUMENTS COLD-FORMED METAL FRAMING\nBID PACKAGE HS-3 05 4000-2",
+      "structured_data": {
+        "building_codes": [
+          "A653",
+          "C955"
+        ],
+        "material_specs": [
+          "Track",
+          "Galvanized",
+          "C955",
+          "A653/A653",
+          "Stud"
+        ],
+        "project_info": [
+          "construction tolerances, deflection of building structural members,",
+          "conditions within required limits.",
+          ", fabricate, and erect to withstand specified",
+          "not less than 1/2 in vertical",
+          "ure, Inc. TMP20069",
+          "movement using slotted holes, shouldered screws or screws and anti-friction or stepped"
+        ],
+        "structural_steel": [
+          "653",
+          "COLD-FORMED METAL FRAMING",
+          "Track",
+          "Stud"
+        ],
+        "abbreviations": [
+          "Section 01",
+          "aff",
+          "COLD-FORMED METAL FRAMING"
+        ],
+        "document_type": "construction_specification",
+        "document_characteristics": {
+          "has_technical_drawings": true,
+          "has_specifications": true,
+          "has_building_codes": false,
+          "has_dimensions": true,
+          "has_materials": true,
+          "has_fire_protection": false,
+          "has_structural_elements": false,
+          "has_load_requirements": true,
+          "document_complexity": "complex",
+          "language_indicators": [
+            "regulatory",
+            "technical",
+            "procedural",
+            "instructional"
+          ],
+          "technical_density": 0.18322295805739514
+        },
+        "paragraph_count": 0,
+        "section_headers": 0,
+        "numbered_items": 21,
+        "bullet_points": 0,
+        "avg_sentence_length": 7.0,
+        "reading_complexity": "low"
+      },
+      "element_count": 1,
+      "confidence_avg": 0.9,
+      "matched_keywords": [
+        "DESIGN LOADS"
+      ],
+      "keyword_count": 1,
+      "fallback_extraction": false
+    }
+  ]
+}

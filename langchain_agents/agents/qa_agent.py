@@ -3,7 +3,6 @@ import sys
 from typing import Dict, Any, List
 from .base_agent import Talk2DrawingsBaseAgent
 
-# Add parent directory to path
 sys.path.append('..')
 
 

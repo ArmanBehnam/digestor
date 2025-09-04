@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class Talk2DrawingsBaseAgent(ABC):
-    """Base agent for Talk2Drawings pipeline"""
 
     def __init__(self, name: str):
         self.name = name
@@ -18,16 +17,13 @@ class Talk2DrawingsBaseAgent(ABC):
 
     @abstractmethod
     async def process(self, input_data: Any, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Main processing method for the agent"""
         pass
 
     @abstractmethod
     def validate_input(self, input_data: Any) -> bool:
-        """Validate input data"""
         pass
 
     def get_stats(self) -> Dict[str, Any]:
-        """Get agent performance statistics"""
         success_rate = ((self.processing_count - self.error_count) / max(self.processing_count, 1)) * 100
         return {
             'name': self.name,
@@ -38,13 +34,11 @@ class Talk2DrawingsBaseAgent(ABC):
         }
 
     def _record_processing(self, success: bool = True):
-        """Record processing statistics"""
         self.processing_count += 1
         if not success:
             self.error_count += 1
 
     async def safe_process(self, input_data: Any, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Safe processing with error handling"""
         try:
             if not self.validate_input(input_data):
                 raise ValueError(f"Invalid input for agent {self.name}")

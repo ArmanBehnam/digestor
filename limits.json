@@ -1,0 +1,148 @@
+{
+  "building code": {
+    "match": "building code",
+    "type": "regex",
+    "pattern": ".*",
+    "not_found": "ok"
+  },
+  "asce reference": {
+    "match": "asce 7",
+    "type": "regex",
+    "pattern": ".*",
+    "not_found": "ok"
+  },
+  "deflection": {
+    "match": "deflection",
+    "type": "numeric_range",
+    "min": 80,
+    "max": 1200,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "basic wind speed": {
+    "match": "basic wind speed",
+    "type": "any_in_range",
+    "min": 30,
+    "max": 300,
+    "unit": "mph",
+    "not_found": "fail"
+  },
+  "risk category": {
+    "match": "risk category",
+    "type": "enum",
+    "allowed": ["II", "III", "IV"],
+    "not_found": "fail"
+  },
+  "exposure category": {
+    "match": "exposure category",
+    "type": "enum",
+    "allowed": ["B", "C", "D"],
+    "not_found": "fail"
+  },
+  "internal pressure coefficient": {
+    "match": "internal pressure coefficient",
+    "type": "numeric_range",
+    "min": 0.01,
+    "max": 1.0,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "roof live load": {
+    "match": "roof live load",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 200,
+    "unit": "psf",
+    "not_found": "fail"
+  },
+  "roof dead load": {
+    "match": "roof dead load",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 100,
+    "unit": "psf",
+    "not_found": "fail"
+  },
+  "ground snow load pg": {
+    "match": "ground snow load",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 800,
+    "unit": "psf",
+    "not_found": "fail"
+  },
+  "snow importance factor is": {
+    "match": "snow importance factor",
+    "type": "numeric_range",
+    "min": 1,
+    "max": 5,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "snow exposure factor ce": {
+    "match": "snow exposure factor",
+    "type": "numeric_range",
+    "min": 0.7,
+    "max": 1.2,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "thermal factor ct": {
+    "match": "thermal factor",
+    "type": "enum",
+    "allowed": ["0.85", "1.2"],
+    "not_found": "fail"
+  },
+  "flat roof snow load pf": {
+    "match": "flat roof snow load",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 600,
+    "unit": "psf",
+    "not_found": "fail"
+  },
+  "seismic risk category": {
+    "match": "seismic risk category",
+    "type": "enum",
+    "allowed": ["I", "II", "III", "IV"],
+    "not_found": "fail"
+  },
+  "seismic importance factor ie": {
+    "match": "seismic importance factor",
+    "type": "numeric_range",
+    "min": 1,
+    "max": 1.5,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "component importance factor ip": {
+    "match": "component importance factor",
+    "type": "numeric_range",
+    "min": 1,
+    "max": 1.5,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "site class": {
+    "match": "site class",
+    "type": "enum",
+    "allowed": ["A", "B", "C", "D", "E", "F"],
+    "not_found": "fail"
+  },
+  "sds": {
+    "match": "sds",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 4.0,
+    "unit": "g",
+    "not_found": "fail"
+  },
+  "sd1": {
+    "match": "sd1",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 4.0,
+    "unit": "g",
+    "not_found": "fail"
+  }
+}

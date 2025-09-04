@@ -35,7 +35,7 @@ class Talk2DrawingsWorkflow:
                 from llm_tools.config_loader import ConfigLoader
                 return ConfigLoader.load("llm_tools/config.yaml")
         except Exception as e:
-            print(f"⚠️ Could not load config: {e}, using default config")
+            print(f"Could not load config: {e}, using default config")
             return {
                 'prompt_engineering': {'enabled': True},
                 'questions': [
@@ -44,17 +44,19 @@ class Talk2DrawingsWorkflow:
                 ]
             }
 
-    async def process_document(self, pdf_path: str,  prompt_engineering: bool = True, optimization_level: str = "balanced") -> Dict[str, Any]:
+    async def process_document(self, pdf_path: str, prompt_engineering: bool = True, enable_validation: bool = True, optimization_level: str = "balanced") -> Dict[str, Any]:
         if not Path(pdf_path).exists():
-            return {'success': False,
-                'error': f"PDF file not found: {pdf_path}"
-            }
+            return {'success': False, 'error': f"PDF file not found: {pdf_path}"}
 
-        input_data = {'pdf_path': pdf_path,
+        input_data = {
+            'pdf_path': pdf_path,
             'config': {
                 'prompt_engineering': prompt_engineering,
+                'enable_validation': enable_validation,  # NEW
                 'optimization_level': optimization_level,
-                **self.config}}
+                **self.config
+            }
+        }
 
         result = await self.orchestrator.safe_process(input_data)
         return result
@@ -65,6 +67,25 @@ class Talk2DrawingsWorkflow:
             'qa_agent': self.orchestrator.qa_agent.get_stats()
         }
 
+    async def process_ocr_only(self, pdf_path: str) -> Dict[str, Any]:
+        input_data = {
+            'pdf_path': pdf_path,
+            'config': {'processing_mode': 'ocr_only'}
+        }
+        return await self.orchestrator.safe_process(input_data)
+
+    async def process_llm_only(self, ocr_data_path: str) -> Dict[str, Any]:
+        input_data = {
+            'pdf_path': '',
+            'config': {
+                'processing_mode': 'llm_only',
+                'ocr_data_path': ocr_data_path
+            }
+        }
+        return await self.orchestrator.safe_process(input_data)
+
+    async def process_full_pipeline(self, pdf_path: str, **kwargs) -> Dict[str, Any]:
+        return await self.process_document(pdf_path, **kwargs)
 
 async def process_pdf_with_agents(pdf_path: str, prompt_engineering: bool = True, optimization_level: str = "balanced") -> Dict[str, Any]:
 

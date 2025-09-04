@@ -1,0 +1,30 @@
+Question_Number,Question,Answer,Page,Source_PDF,Confidence,Source,Deflection_Default,Processing_Mode
+1,"What building code and year of the building code is referenced (e.g., IBC, NYSBC, NYCBC, Chicago Building Code)?",IBC 2015,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+2,"Is an ASCE 7 standard mentioned? If so, which version (e.g., ASCE 7-10, 7-16)?",ASCE 7-10,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+3,What are the exterior wall deflection limits?,"Exterior wall deflection limits: 
+   - Maximum horizontal deflection under wind load of 1/720 of span for walls with masonry veneer.
+   - Maximum horizontal deflection under wind load of 1/360 of span for all walls without masonry veneer.",2,5400 from spec book.pdf,100%,OCR,,Merged_JSON
+4,What is the interior wall deflect  ion limit?,"Interior wall deflection limit: 
+   - Maximum horizontal deflection under a horizontal load of 5 psf shall be 1/720 of span for walls with masonry veneer.
+   - Maximum horizontal deflection under a horizontal load of 5 psf shall be 1/240 of span for all walls without masonry veneer.",2,5400 from spec book.pdf,100%,OCR,,Merged_JSON
+5,What is the floor joist framing deflection limit?,Floor joist framing deflection limit: Maximum vertical deflection under live load of 1/480 of span,2,5400 from spec book.pdf,100%,OCR,,Merged_JSON
+6,What is the roof rafter framing deflection limit?,Roof rafter framing deflection limit: Maximum vertical deflection under live load of 1/360 of span,2,5400 from spec book.pdf,100%,OCR,,Merged_JSON
+7,What is the ceiling joist framing deflection limit?,Ceiling joist framing deflection limit: Not specifically mentioned,1,s only thru add 1 - quote.pdf,0%,OCR,,Merged_JSON
+8,What is the maximum primary structure vertical deflection due to live load?,Maximum primary structure vertical deflection due to live load: Not specifically mentioned,1,s only thru add 1 - quote.pdf,0%,OCR,,Merged_JSON
+9,What is the basic wind speed (in mph)?,Basic wind speed: 120 mph,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+10,"What is the building risk category (e.g., I, II, III)?",Building risk category: III,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+11,"What is the exposure category (e.g., B, C)?",Exposure category: B,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+12,What is the internal pressure coefficient (GCpi)?,Internal pressure coefficient (GCpi): ± 0.18,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+13,What is the roof live load?,Roof live load: 22 psf,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+14,What is the roof dead load?,Roof dead load: Not specifically mentioned,1,s only thru add 1 - quote.pdf,0%,OCR,,Merged_JSON
+15,What is the ground snow load (Pg)?,Ground snow load (Pg): 25 psf,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+16,What is the snow load importance factor (Is)?,Snow load importance factor (Is): 1.1,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+17,What is the snow load exposure factor (Ce)?,Snow load exposure factor (Ce): 1.0,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+18,What is the thermal factor (Ct)?,Thermal factor (Ct): 1.0,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+19,What is the flat roof snow load (Pf)?,Flat roof snow load (Pf): 25 psf (minimum),3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+20,"What is the seismic design category (e.g., A, B, C)?",Seismic design category: B,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+21,What is the seismic importance factor (Ie)?,Seismic importance factor (Ie): 1.25,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+22,What is the component importance factor (Ip)?,Component importance factor (Ip): Not specifically mentioned,1,s only thru add 1 - quote.pdf,0%,OCR,,Merged_JSON
+23,"What is the site class (e.g., D, E, F)?",Site class: D,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+24,What is the value of Sds ?,Value of Sds: 0.100 g,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON
+25,What is the value of Sd1?,Value of Sd1: 0.075 g,3,s only thru add 1 - quote.pdf,100%,OCR,,Merged_JSON

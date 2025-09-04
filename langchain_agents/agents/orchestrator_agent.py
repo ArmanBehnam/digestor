@@ -7,40 +7,34 @@ from datetime import datetime
 from .base_agent import Talk2DrawingsBaseAgent
 from .ocr_agent import OCRAgent
 from .qa_agent import EngineeringQAAgent
-
-# Add parent directory to path
+from .validation_agent import ValidationAgent
+import json
 sys.path.append('..')
 
 
 class OrchestratorAgent(Talk2DrawingsBaseAgent):
-    """Orchestrator agent that coordinates all other agents"""
 
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__("Orchestrator_Agent")
         self.config = config or {}
 
-        # Initialize other agents
         self.ocr_agent = OCRAgent(config)
         self.qa_agent = EngineeringQAAgent(config)
 
-        print(f"✅ {self.name}: Initialized with OCR and QA agents")
+        print(f"{self.name}: Initialized with OCR and QA agents")
 
     def validate_input(self, input_data: Any) -> bool:
-        """Validate input has PDF path and config"""
         return (isinstance(input_data, dict) and
                 'pdf_path' in input_data)
 
     async def process(self, input_data: Dict[str, Any], context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Orchestrate the complete workflow"""
         try:
             pdf_path = input_data['pdf_path']
             config = input_data.get('config', {})
 
-            print(f"🎯 Orchestrator starting workflow for: {Path(pdf_path).name}")
-            print("=" * 50)
+            print(f"Orchestrator starting workflow for: {Path(pdf_path).name}")
 
-            # Step 1: OCR Processing
-            print("📄 Step 1: OCR Processing...")
+            print("Step 1: OCR Processing")
             ocr_result = await self.ocr_agent.safe_process(pdf_path, context)
 
             if not ocr_result['success']:
@@ -51,10 +45,9 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
                     'step_failed': 'OCR'
                 }
 
-            print(f"✅ OCR completed: {len(ocr_result['page_results'])} pages processed")
+            print(f"OCR completed: {len(ocr_result['page_results'])} pages processed")
 
-            # Step 2: Engineering Q&A
-            print("❓ Step 2: Engineering Q&A...")
+            print("Step 2: Engineering Q&A")
             qa_result = await self.qa_agent.safe_process(ocr_result, context)
 
             if not qa_result['success']:
@@ -65,15 +58,14 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
                     'step_failed': 'QA'
                 }
 
-            print(f"✅ QA completed: {qa_result.get('questions_processed', 0)} questions processed")
+            print(f"QA completed: {qa_result.get('questions_processed', 0)} questions processed")
 
-            # Step 3: Apply defaults and generate results
-            print("📊 Step 3: Generating final results...")
+            print("Step 3: Generating final results")
             final_results = await self._generate_final_results(
                 ocr_result, qa_result, pdf_path, config
             )
 
-            print("✅ Workflow completed successfully!")
+            print("Workflow completed successfully!")
 
             return {
                 'success': True,
@@ -90,26 +82,20 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
         except Exception as e:
             raise Exception(f"Orchestration failed: {e}")
 
-    async def _generate_final_results(self, ocr_result: Dict, qa_result: Dict,
-                                      pdf_path: str, config: Dict) -> Dict[str, Any]:
-        """Generate final CSV and JSON results"""
-
+    async def _generate_final_results(self, ocr_result: Dict, qa_result: Dict, pdf_path: str, config: Dict) -> Dict[str, Any]:
         try:
-            # Import deflection defaults function
             from llm_tools.utils import apply_deflection_defaults
 
             questions = self.qa_agent.questions
             raw_answers = qa_result['qa_results']
 
-            # Apply defaults
             processed_answers = apply_deflection_defaults(raw_answers, questions)
 
         except ImportError:
-            print("⚠️ Could not import apply_deflection_defaults, using raw answers")
+            print("Could not import apply_deflection_defaults, using raw answers")
             processed_answers = qa_result['qa_results']
             questions = self.qa_agent.questions
 
-        # Create results DataFrame
         results_data = []
         for i, question in enumerate(questions, 1):
             qid = f"Q{i}"
@@ -121,7 +107,6 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
                 confidence = answer_data.get('confidence', 0)
                 source = answer_data.get('source', 'Unknown')
             else:
-                # Handle string answers (fallback)
                 answer = str(answer_data) if answer_data else 'Not Found'
                 page = 'N/A'
                 confidence = 0
@@ -134,12 +119,10 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
                 'Page': page,
                 'Confidence': f"{confidence}%",
                 'Source': source,
-                'Deflection_Default': 'Applied' if source == 'deflection_defaults.csv' else ''
-            })
+                'Deflection_Default': 'Applied' if source == 'deflection_defaults.csv' else ''})
 
         df = pd.DataFrame(results_data)
 
-        # Generate output files
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         project_name = Path(pdf_path).stem
 
@@ -147,7 +130,6 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
         csv_path = output_dir / f"pipeline_results_agents_{project_name}_{timestamp}.csv"
         json_path = output_dir / f"pipeline_results_agents_{project_name}_{timestamp}.json"
 
-        # Save files
         df.to_csv(csv_path, index=False)
 
         json_results = {
@@ -158,16 +140,15 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
                 'defaults_applied': len([r for r in results_data if r['Deflection_Default'] == 'Applied']),
                 'timestamp': timestamp
             },
-            'results': results_data
-        }
+            'results': results_data}
 
         import json
         with open(json_path, 'w') as f:
             json.dump(json_results, f, indent=2)
 
-        print(f"💾 Results saved:")
-        print(f"   📄 CSV: {csv_path}")
-        print(f"   📄 JSON: {json_path}")
+        print(f"Results saved:")
+        print(f"   CSV: {csv_path}")
+        print(f"   JSON: {json_path}")
 
         return {
             'csv_path': str(csv_path),
@@ -176,10 +157,7 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
             'summary': json_results['processing_summary']
         }
 
-    async def _generate_final_results_merged(self, merged_data: Dict, qa_result: Dict,
-                                             output_dir: str, config: Dict) -> Dict[str, Any]:
-        """Generate results for merged JSON processing with source attribution"""
-
+    async def _generate_final_results_merged(self, merged_data: Dict, qa_result: Dict, output_dir: str, config: Dict) -> Dict[str, Any]:
         try:
             from llm_tools.utils import apply_deflection_defaults
             questions = self.qa_agent.questions
@@ -189,7 +167,6 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
             processed_answers = qa_result['qa_results']
             questions = self.qa_agent.questions
 
-        # Create results with source attribution
         results_data = []
         for i, question in enumerate(questions, 1):
             qid = f"Q{i}"
@@ -206,7 +183,6 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
                 confidence = 0
                 source = 'Legacy'
 
-            # Map page back to source PDF using merged data
             source_pdf = self._identify_source_pdf(page, merged_data)
 
             results_data.append({
@@ -223,7 +199,6 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
 
         df = pd.DataFrame(results_data)
 
-        # Generate output files
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         source_pdfs = merged_data.get('document_info', {}).get('source_files', [])
         project_name = f"merged_{len(source_pdfs)}_pdfs"
@@ -232,7 +207,6 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
         csv_path = output_dir / f"pipeline_results_merged_{project_name}_{timestamp}.csv"
         json_path = output_dir / f"pipeline_results_merged_{project_name}_{timestamp}.json"
 
-        # Save files
         df.to_csv(csv_path, index=False)
 
         json_results = {
@@ -252,9 +226,9 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
         with open(json_path, 'w') as f:
             json.dump(json_results, f, indent=2)
 
-        print(f"💾 Merged results saved:")
-        print(f"   📄 CSV: {csv_path}")
-        print(f"   📄 JSON: {json_path}")
+        print(f"Merged results saved:")
+        print(f"   CSV: {csv_path}")
+        print(f"   JSON: {json_path}")
 
         return {
             'csv_path': str(csv_path),
@@ -264,15 +238,12 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
         }
 
     def _identify_source_pdf(self, page_ref: str, merged_data: Dict) -> str:
-        """Identify which PDF a page reference came from"""
         try:
-            # Look through source mapping
             source_mapping = merged_data.get('source_mapping', [])
             for mapping in source_mapping:
                 if str(page_ref) in mapping.get('global_page_id', ''):
                     return mapping.get('source_pdf', 'Unknown')
 
-            # Fallback to first PDF if mapping fails
             source_files = merged_data.get('document_info', {}).get('source_files', [])
             return source_files[0] if source_files else 'Unknown'
         except:

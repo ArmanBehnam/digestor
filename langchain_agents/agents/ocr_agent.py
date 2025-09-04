@@ -19,9 +19,9 @@ class OCRAgent(Talk2DrawingsBaseAgent):
         try:
             from ocr_tools.utils.help import EnhancedPDFProcessor
             self.processor = EnhancedPDFProcessor()
-            print(f"✅ {self.name}: EnhancedPDFProcessor loaded successfully")
+            print(f"{self.name}: EnhancedPDFProcessor loaded successfully")
         except ImportError as e:
-            print(f"⚠️ {self.name}: Could not load EnhancedPDFProcessor: {e}")
+            print(f"{self.name}: Could not load EnhancedPDFProcessor: {e}")
             self.processor = None
             self.is_available = False
 
@@ -58,7 +58,7 @@ class OCRAgent(Talk2DrawingsBaseAgent):
             if self.save_ocr_json:
                 json_path = self._save_ocr_json(pdf_path, result)
                 ocr_result['ocr_json_path'] = json_path
-                print(f"💾 OCR JSON saved: {json_path}")
+                print(f"OCR JSON saved: {json_path}")
 
             return ocr_result
 
