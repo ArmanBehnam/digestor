@@ -28,14 +28,6 @@ pytesseract>=0.3.0
 # Optional: For enhanced text processing
 nltk>=3.7
 spacy>=3.4.0
-
-# agents
-langchain==0.1.0
-langchain-openai==0.1.0
-langchain-anthropic==0.1.0
-langchain-community==0.1.0
-pydantic==2.5.0
-python-dotenv==1.0.0
 asyncio
 
 # Missing dependencies
