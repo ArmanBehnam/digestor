@@ -13,29 +13,6 @@ graph TD
     V --> F[Orchestrator Agent]
     F --> G[Results CSV/JSON + Validated CSV]
 =======
-# Digetor v1.1
-
-LangChain Multi-Agent Architecture
-
-## **System Flow**
-
-```mermaid
-graph TD
-    A[PDF Input] --> B[OCR Agent]
-    B --> C[Content Extractor Agent]
-    C --> D[Page Filter Agent]
-    D --> E[Engineering QA Agent]
-    E --> F[Orchestrator Agent]
-    F --> G[Results CSV/JSON]
->>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
-    
-    H[User Config] --> F
-    I[LLM Engines] --> E
-    J[Prompt Engineering] --> E
-<<<<<<< HEAD
-    K[limits.json] --> V
-=======
->>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
 ```
 
 
@@ -56,7 +33,6 @@ $env:PYTHONPATH = "$PWD;$PWD\llm_tools;$PWD\ocr_tools"
 
 ### **Step 2: Command Line Interface**
 ```bash
-<<<<<<< HEAD
 python merged_batch_workflow.py --directory "path/to/pdfs" --prompt-engineering
 
 # OCR Only:
@@ -143,21 +119,7 @@ Processing Time: ~5 minutes average per document
 Deflection Defaults: 3 applied automatically
 OCR Confidence: 0.74 average
 ```
-### **Processing Times**
-| Document Type | Pages | OCR Time | LLM Time | Total Time |
-|---------------|-------|----------|----------|------------|
-| Spec Book | 4 pages | 0.94s | 6.7s | ~8s |
-| Quote Document | 35 pages | 229s | 12s | ~4 min |
-| Structural Plans | 14 pages | 297s | 11s | ~5 min |
 
-### **Success Rates**
-- **Overall Success**: 100% (3/3 PDFs)
-- **OCR Accuracy**: 74% average confidence
-- **Question Coverage**: 100% (25/25 questions answered)
-- **Deflection Defaults**: Applied when needed (3/25 questions)
-
-
->>>>>>> 09d9ed020ed290b55a288a7e615cc041a7f21627
 
 ## **Production Deployment**
 
