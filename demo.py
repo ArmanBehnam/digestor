@@ -1,3 +1,5 @@
+# demo.py
+
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
@@ -48,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="LangChain Multi-Agent PDF Processor",
-    version="1.0.0",
+    version="1.2.0",
     description="Process engineering PDFs using multi-agent LangChain system"
 )
 
@@ -565,7 +567,7 @@ async def process_batch_documents(files: List[UploadFile] = File(...)):
     if not BATCH_AVAILABLE:
         raise HTTPException(
             status_code=503,
-            detail="Batch processing not available. Please ensure langchain_agents/batch_workflow.py is accessible."
+            detail="Batch processing not available. Please ensure agentic/batch_workflow.py is accessible."
         )
 
     if len(files) > 10:
@@ -592,7 +594,7 @@ async def process_batch_documents(files: List[UploadFile] = File(...)):
 
         logger.info(f"Saved {len(saved_files)} files to {temp_dir}")
 
-        logger.info("Starting batch processing with LangChain agents...")
+        logger.info("Starting batch processing with LangChain agents")
 
         try:
             results = await process_directory(str(temp_dir), prompt_engineering=True)
