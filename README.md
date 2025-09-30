@@ -1,4 +1,4 @@
-# Digetor v1.3  
+# Digestor v1.3  
   
 LangChain Multi-Agent Architecture with Validation & Quality Control Release  
 ## **System Flow**  
@@ -48,15 +48,16 @@ Key Features
 #### OCR Engines (Priority-based Fallback)
 
 1.  **AWS Textract** - Primary engine (high accuracy)
-2.  **Claude Vision (Bedrock)** - First fallback
-3.  **Tesseract** - Second fallback
+2.  **Tesseract** - First fallback
+3.  **Claude Vision (Bedrock)** - Second fallback
 4.  **OpenCV** - Fallback for basic text
 
 #### LLM Engines (Automatic Switching)
 
 1.  **GPT-4o** - Primary (800k TPM capacity)
-2.  **Claude Sonnet 4.5** - Fallback
-3.  **DeepSeek R1** - Cost-effective fallback
+2.  **DeepSeek R1** - Cost-effective fallback
+3.  **LlaMa 4** - Fallback
+4.  **Claude Sonnet 4.5** - Fallback
 
 ### 3. Engineering Domain Intelligence
 
