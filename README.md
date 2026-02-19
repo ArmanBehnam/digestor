@@ -185,10 +185,19 @@ aws ecs update-service --cluster digestor-dev --service digestor-worker-dev --fo
 | GET | `/api/analytics/overview` | Dashboard metrics |
 | GET | `/api/health` | Health check |
 
+## Monitoring & Security
+
+- **CloudWatch Dashboard**: Real-time metrics (requests, response time, CPU/memory, RDS)
+- **CloudWatch Alarms**: 6 alarms for 5xx errors, unhealthy targets, CPU, memory, response time
+- **Auto-scaling**: Web (1-4 tasks) and Worker (1-3 tasks) scale on CPU at 70%
+- **WAF v2**: SQL injection, XSS, known exploits, IP rate limiting (2000 req/5 min)
+
+See [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md) for full monitoring, troubleshooting, and operations guide.
+
 ## Testing
 
 ```bash
-# Run E2E tests against deployed environment
+# Run E2E tests against deployed environment (43 tests)
 python test_phase5.py
 
 # Run unit tests

@@ -203,3 +203,145 @@ Client → ALB (HTTPS:443) → ECS Fargate (web:8080)
 | `ENVIRONMENT` | No | `development` / `production` |
 | `SQL_ECHO` | No | `true` to log SQL queries |
 | `USE_SECRETS_MANAGER` | No | `true` to load from Secrets Manager |
+
+---
+
+## 8. Monitoring & Alerting
+
+### CloudWatch Dashboard
+
+View live metrics at: **CloudWatch > Dashboards > digestor-dev**
+
+The dashboard includes:
+- ALB request count (2xx, 4xx, 5xx breakdown)
+- ALB response time (average + p99)
+- ECS Web service CPU & memory utilization
+- ECS Worker service CPU & memory utilization
+- Healthy/unhealthy target count
+- RDS CPU & active connections
+- Alarm status panel
+
+### CloudWatch Alarms
+
+| Alarm | Metric | Threshold | Evaluation |
+|-------|--------|-----------|------------|
+| `digestor-dev-5xx-errors` | ALB 5xx count | >10 in 5 min | 1 period |
+| `digestor-dev-unhealthy-targets` | Unhealthy host count | >=1 | 3 x 1 min |
+| `digestor-dev-web-cpu-high` | Web CPU utilization | >80% | 2 x 5 min |
+| `digestor-dev-web-memory-high` | Web memory utilization | >85% | 2 x 5 min |
+| `digestor-dev-worker-cpu-high` | Worker CPU utilization | >80% | 2 x 5 min |
+| `digestor-dev-response-time-high` | Avg response time | >5 seconds | 2 x 5 min |
+
+Check alarm status:
+```bash
+aws cloudwatch describe-alarms --alarm-name-prefix digestor-dev \
+  --query "MetricAlarms[].[AlarmName,StateValue]" --output table
+```
+
+### Logs
+
+All application logs are in CloudWatch Logs group `/ecs/digestor-dev`:
+```bash
+# View recent web logs
+aws logs tail /ecs/digestor-dev --filter-pattern "web" --since 1h
+
+# View recent worker logs
+aws logs tail /ecs/digestor-dev --filter-pattern "worker" --since 1h
+
+# Search for errors
+aws logs filter-log-events --log-group-name /ecs/digestor-dev \
+  --filter-pattern "ERROR" --start-time $(date -d '1 hour ago' +%s000)
+```
+
+---
+
+## 9. Auto-Scaling
+
+ECS services auto-scale based on CPU utilization:
+
+| Service | Min Tasks | Max Tasks | CPU Target | Scale Out | Scale In |
+|---------|-----------|-----------|------------|-----------|----------|
+| Web | 1 | 4 | 70% | 60s cooldown | 300s cooldown |
+| Worker | 1 | 3 | 70% | 60s cooldown | 300s cooldown |
+
+Check current scaling status:
+```bash
+aws application-autoscaling describe-scalable-targets \
+  --service-namespace ecs \
+  --query "ScalableTargets[].[ResourceId,MinCapacity,MaxCapacity]" --output table
+```
+
+---
+
+## 10. WAF (Web Application Firewall)
+
+The ALB is protected by AWS WAF v2 (`digestor-dev-waf`) with these rules:
+
+| Rule | Priority | Action | Description |
+|------|----------|--------|-------------|
+| AWSManagedRulesCommonRuleSet | 1 | Block | XSS, path traversal, file inclusion |
+| AWSManagedRulesSQLiRuleSet | 2 | Block | SQL injection attacks |
+| AWSManagedRulesKnownBadInputsRuleSet | 3 | Block | Log4j, SSRF, known exploits |
+| RateLimitRule | 4 | Block | >2000 requests per IP per 5 min |
+
+Check WAF metrics:
+```bash
+aws wafv2 get-sampled-requests --web-acl-arn "YOUR_WAF_ARN" \
+  --rule-metric-name RateLimit --scope REGIONAL \
+  --time-window StartTime=$(date -d '1 hour ago' +%s),EndTime=$(date +%s) --max-items 10
+```
+
+---
+
+## 11. E2E Testing
+
+Run the comprehensive test suite against the deployed environment:
+
+```bash
+python test_phase5.py
+```
+
+This runs 43 tests covering:
+- Authentication (all 3 roles: admin, supervisor, engineer)
+- Document upload, processing, and result retrieval
+- Feedback (thumbs up/down) and inline answer editing
+- Project CRUD, submission, and supervisor approval/rejection
+- Ticket creation and listing
+- Analytics dashboard endpoint
+
+---
+
+## 12. Troubleshooting
+
+### Container won't start
+```bash
+# Check ECS service events
+aws ecs describe-services --cluster digestor-dev --services digestor-web-dev \
+  --query "services[0].events[:5]" --output table
+
+# Check container logs
+aws logs tail /ecs/digestor-dev --since 10m
+```
+
+### Processing stuck (infinite polling)
+- Backend must set `status = "complete"` (not `"completed"`)
+- Check if the document processing record exists in RDS
+- Check worker logs for Redis connection issues
+
+### Worker crash loop
+- Verify Redis is reachable from ECS security group
+- Check `socket_timeout` setting (should be 600, not 10)
+
+### Login succeeds but page doesn't redirect
+- Frontend must use `useAuth().login()`, not `apiClient.login()` directly
+
+### Upload returns 500
+- Check S3 bucket permissions (ECS task role needs s3:PutObject)
+- Verify `content_type` fallback handles None values
+
+### ECS keeps using old image after push
+- `:latest` tag doesn't force pull. Must register new task definition with `@sha256:DIGEST`
+- The CI/CD pipeline handles this automatically
+
+### Windows / Git Bash path issues
+- Always prefix AWS CLI commands with `MSYS_NO_PATHCONV=1` to prevent path expansion
