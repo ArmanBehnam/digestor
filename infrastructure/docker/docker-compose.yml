@@ -1,0 +1,118 @@
+# =============================================================================
+# Digestor Unified - Local Development Environment
+# Usage: docker compose up --build
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # --- PostgreSQL (replaces RDS in local dev) ---
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: digestor_dev
+      POSTGRES_USER: digestor
+      POSTGRES_PASSWORD: digestor_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U digestor -d digestor_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Redis (replaces ElastiCache in local dev) ---
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Database Migration (runs once, then exits) ---
+  migrate:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://digestor:digestor_dev_password@postgres:5432/digestor_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: python -m alembic upgrade head
+    restart: "no"
+
+  # --- Web Server (FastAPI + React) ---
+  web:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+    environment:
+      PROCESS_TYPE: web
+      PORT: "8080"
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://digestor:digestor_dev_password@postgres:5432/digestor_dev
+      REDIS_URL: redis://redis:6379
+      S3_BUCKET: digestor-dev-storage
+      AWS_REGION: us-east-1
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_APP_CLIENT_ID: ${COGNITO_APP_CLIENT_ID:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      ALLOWED_ORIGINS: http://localhost:8080,http://localhost:5173
+      SQL_ECHO: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # --- Worker (RQ background processor) ---
+  worker:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+    environment:
+      PROCESS_TYPE: worker
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://digestor:digestor_dev_password@postgres:5432/digestor_dev
+      REDIS_URL: redis://redis:6379
+      S3_BUCKET: digestor-dev-storage
+      AWS_REGION: us-east-1
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # --- Frontend Dev Server (optional: hot-reload, proxied to backend) ---
+  # Uncomment for frontend development with Vite hot reload:
+  # frontend-dev:
+  #   image: node:20-alpine
+  #   working_dir: /app
+  #   command: npm run dev -- --host 0.0.0.0
+  #   volumes:
+  #     - ../../frontend:/app
+  #     - /app/node_modules
+  #   ports:
+  #     - "5173:5173"
+  #   environment:
+  #     VITE_API_URL: http://localhost:8080
+
+volumes:
+  postgres_data:
