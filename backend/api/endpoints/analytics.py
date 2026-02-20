@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case
 
 from api.dependencies import get_db, get_current_user
-from db.models import AnalyticsEvent, DocumentProcessing, UserFeedback
+from db.models import AnalyticsEvent, DocumentProcessing, UserFeedback, ResultEdit
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -133,17 +133,73 @@ async def analytics_trends(
         .order_by(func.date_trunc("day", DocumentProcessing.created_at))
     )
 
-    result = await db.execute(daily_stmt)
-    rows = result.all()
+    try:
+        result = await db.execute(daily_stmt)
+        rows = result.all()
+
+        return {
+            "trends": [
+                {
+                    "date": row.day.isoformat() if row.day else None,
+                    "count": row.count,
+                    "avg_confidence": round(float(row.avg_confidence), 4) if row.avg_confidence else 0,
+                    "avg_time_ms": int(row.avg_time_ms) if row.avg_time_ms else 0,
+                }
+                for row in rows
+            ],
+        }
+    except Exception as e:
+        logger.error("analytics_trends_error", error=str(e))
+        return {"trends": []}
+
+
+@router.get("/analytics/edits")
+async def analytics_edits(
+    days: int = Query(30, ge=1, le=365),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get edit analytics - how many edits per category, per user, etc."""
+    since = datetime.utcnow() - timedelta(days=days)
+
+    # Total edits
+    total_edits = (await db.execute(
+        select(func.count(ResultEdit.id)).where(ResultEdit.created_at >= since)
+    )).scalar() or 0
+
+    # Edits by category
+    category_stmt = (
+        select(
+            ResultEdit.category,
+            func.count(ResultEdit.id).label("count"),
+        )
+        .where(ResultEdit.created_at >= since)
+        .group_by(ResultEdit.category)
+        .order_by(func.count(ResultEdit.id).desc())
+    )
+    category_rows = (await db.execute(category_stmt)).all()
+
+    # Edits by user
+    user_stmt = (
+        select(
+            ResultEdit.edited_by_full_name,
+            func.count(ResultEdit.id).label("count"),
+        )
+        .where(ResultEdit.created_at >= since)
+        .group_by(ResultEdit.edited_by_full_name)
+        .order_by(func.count(ResultEdit.id).desc())
+    )
+    user_rows = (await db.execute(user_stmt)).all()
 
     return {
-        "trends": [
-            {
-                "date": row.day.isoformat() if row.day else None,
-                "count": row.count,
-                "avg_confidence": round(row.avg_confidence, 4) if row.avg_confidence else 0,
-                "avg_time_ms": int(row.avg_time_ms) if row.avg_time_ms else 0,
-            }
-            for row in rows
+        "period_days": days,
+        "total_edits": total_edits,
+        "by_category": [
+            {"category": row.category or "Unknown", "count": row.count}
+            for row in category_rows
+        ],
+        "by_user": [
+            {"user": row.edited_by_full_name or "Unknown", "count": row.count}
+            for row in user_rows
         ],
     }

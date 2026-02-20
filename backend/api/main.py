@@ -31,6 +31,9 @@ from api.endpoints import (
     analytics,
     websocket,
     health,
+    files,
+    admin,
+    feedback_survey,
 )
 from db.session import init_db, close_db
 
@@ -83,6 +86,9 @@ app.include_router(projects.router, prefix="/api", tags=["projects"])
 app.include_router(results.router, prefix="/api", tags=["results"])
 app.include_router(tickets.router, prefix="/api", tags=["tickets"])
 app.include_router(analytics.router, prefix="/api", tags=["analytics"])
+app.include_router(files.router, prefix="/api", tags=["files"])
+app.include_router(admin.router, prefix="/api", tags=["admin"])
+app.include_router(feedback_survey.router, prefix="/api", tags=["feedback"])
 
 # --- WebSocket Router ---
 app.include_router(websocket.router, prefix="/ws", tags=["websocket"])

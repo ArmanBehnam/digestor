@@ -18,6 +18,113 @@ from PIL import Image
 import io
 
 
+def update_document_status(document_id, status, results=None, confidence_avg=None, processing_time_ms=None):
+    """Update DocumentProcessing record in RDS (synchronous, for worker use)."""
+    if not document_id:
+        print("[DB] No document_id provided, skipping DB status update")
+        return
+    db_url = os.getenv('DATABASE_URL', '')
+    if not db_url:
+        print("[DB] No DATABASE_URL set, skipping DB status update")
+        return
+    # Convert async URL to sync for psycopg2
+    sync_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
+    try:
+        import psycopg2
+        import psycopg2.extras
+        conn = psycopg2.connect(sync_url)
+        cur = conn.cursor()
+        if results is not None:
+            cur.execute(
+                """UPDATE document_processing
+                   SET status = %s, results = %s, confidence_avg = %s, processing_time_ms = %s
+                   WHERE id = %s""",
+                (status, psycopg2.extras.Json(results), confidence_avg, processing_time_ms, document_id)
+            )
+        else:
+            cur.execute(
+                "UPDATE document_processing SET status = %s WHERE id = %s",
+                (status, document_id)
+            )
+        conn.commit()
+        cur.close()
+        conn.close()
+        print(f"[DB] Updated document {document_id} status to '{status}'")
+    except Exception as e:
+        print(f"[DB] Failed to update document status: {e}")
+
+
+QUESTION_METADATA = [
+    {"category": "Building Code", "question": "What is the building code and its version year?"},
+    {"category": "Building Code", "question": "Is ASCE 7-XX referred?"},
+    {"category": "Deflection Criteria", "question": "What are the exterior wall deflection limits?"},
+    {"category": "Deflection Criteria", "question": "What is the interior wall deflection limit?"},
+    {"category": "Deflection Criteria", "question": "What is the floor joist framing deflection limit?"},
+    {"category": "Deflection Criteria", "question": "What is the roof rafter framing deflection limit?"},
+    {"category": "Deflection Criteria", "question": "What is the ceiling joist framing deflection limit?"},
+    {"category": "Deflection Criteria", "question": "Maximum primary structure vertical deflection due to live load?"},
+    {"category": "Wind Load Criteria", "question": "What is the basic wind speed (Vult)?"},
+    {"category": "Wind Load Criteria", "question": "What is the building risk category?"},
+    {"category": "Wind Load Criteria", "question": "What is the exposure category?"},
+    {"category": "Wind Load Criteria", "question": "What is the internal pressure coefficient (GCpi)?"},
+    {"category": "Gravity Loads", "question": "What is the roof live load?"},
+    {"category": "Gravity Loads", "question": "What is the roof dead load?"},
+    {"category": "Snow Load Criteria", "question": "What is the ground snow load (Pg)?"},
+    {"category": "Snow Load Criteria", "question": "What is the snow load importance factor (Is)?"},
+    {"category": "Snow Load Criteria", "question": "What is the snow exposure factor (Ce)?"},
+    {"category": "Snow Load Criteria", "question": "What is the thermal factor (Ct)?"},
+    {"category": "Snow Load Criteria", "question": "What is the flat roof snow load (Pf)?"},
+    {"category": "Seismic Load Criteria", "question": "What is the seismic design category?"},
+    {"category": "Seismic Load Criteria", "question": "What is the seismic importance factor (Ie)?"},
+    {"category": "Seismic Load Criteria", "question": "What is the component importance factor (Ip)?"},
+    {"category": "Seismic Load Criteria", "question": "What is the site class?"},
+    {"category": "Seismic Load Criteria", "question": "What is the SDS value?"},
+    {"category": "Seismic Load Criteria", "question": "What is the SD1 value?"},
+]
+
+
+def convert_worker_results_to_analysis_format(worker_results):
+    """Convert worker flat results into AnalysisResult[] format for frontend.
+
+    Input: list of dicts with Question_Number, Question, Main_Answer, OCR_Confidence, Page, etc.
+    Output: list of dicts with category, question, pairs: [{answer, reference, confidence, feedback}]
+    """
+    if not worker_results:
+        return []
+
+    analysis_results = []
+    # Index worker results by question number (1-based)
+    results_by_num = {}
+    for r in worker_results:
+        qnum = r.get("Question_Number")
+        if qnum is not None:
+            results_by_num[int(qnum)] = r
+
+    for i, meta in enumerate(QUESTION_METADATA):
+        qnum = i + 1
+        worker_r = results_by_num.get(qnum, {})
+
+        answer = worker_r.get("Main_Answer", "Not Found")
+        confidence = worker_r.get("OCR_Confidence", 0)
+        if isinstance(confidence, (int, float)) and confidence > 1:
+            confidence = confidence / 100.0
+        page = worker_r.get("Page", "N/A")
+        reference = f"Page {page}" if page and page != "N/A" else "Not Found"
+
+        analysis_results.append({
+            "category": meta["category"],
+            "question": meta["question"],
+            "pairs": [{
+                "answer": str(answer) if answer else "Not Found",
+                "reference": reference,
+                "confidence": float(confidence) if confidence else 0.0,
+                "feedback": "up",
+            }],
+        })
+
+    return analysis_results
+
+
 def update_progress(redis_conn, job_id, stage, progress, step_description):
     progress_key = f"job:{job_id}:progress"
     log_key = f"job:{job_id}:logs"
@@ -29,7 +136,7 @@ def update_progress(redis_conn, job_id, stage, progress, step_description):
     print(f"[PROGRESS] {progress}% - {step_description}")
 
 
-def process_pdfs(file_keys, bucket, project_id=None):
+def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
     job = get_current_job()
     job_id = job.id if job else "unknown"
     redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -259,13 +366,32 @@ def process_pdfs(file_keys, bucket, project_id=None):
             traceback.print_exc()
             uploaded_files = {'error': str(upload_error)}
 
+        # Read results JSON before cleanup and convert to AnalysisResult format for DB
+        analysis_results = []
+        avg_confidence = None
+        json_files = list(Path(work_dir).glob("pipeline_results_merged_*.json"))
+        if json_files:
+            try:
+                with open(json_files[0], 'r', encoding='utf-8') as rf:
+                    merged_data = json.load(rf)
+                worker_results = merged_data.get('results', [])
+                analysis_results = convert_worker_results_to_analysis_format(worker_results)
+                # Calculate average confidence
+                confs = [p['pairs'][0]['confidence'] for p in analysis_results if p.get('pairs') and p['pairs'][0].get('confidence')]
+                avg_confidence = sum(confs) / len(confs) if confs else None
+                print(f"[DB] Converted {len(worker_results)} worker results to {len(analysis_results)} AnalysisResult entries")
+            except Exception as conv_err:
+                print(f"[DB] Warning: Could not convert results for DB: {conv_err}")
+
         for f in Path(work_dir).glob("*"):
             try:
                 f.unlink()
             except:
                 pass
         gc.collect()
-        update_progress(redis_conn, job_id, "complete", 100, "✓ Processing complete!")
+        update_progress(redis_conn, job_id, "complete", 100, "Processing complete!")
+        # Update RDS document status to 'complete' with results
+        update_document_status(document_id, "complete", results=analysis_results or None, confidence_avg=avg_confidence)
         return {'success': True, 'batches_processed': len(all_ocr_results), 'bucket': bucket, 'project_id': project_id,
                 **uploaded_files}
     except Exception as e:
@@ -273,6 +399,8 @@ def process_pdfs(file_keys, bucket, project_id=None):
         print(f"Error: {str(e)}")
         import traceback
         traceback.print_exc()
+        # Update RDS document status to 'failed'
+        update_document_status(document_id, "failed")
         return {'success': False, 'error': str(e)}
 
 

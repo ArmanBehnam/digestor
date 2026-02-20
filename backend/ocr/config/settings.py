@@ -297,9 +297,19 @@ class ConfigManager(ConfigurationManager):
             errors.append("OCR preferred_engine is required")
 
         if self.config.ocr.preferred_engine in ["aws_textract", "claude_ocr"]:
-            if not self.config.ocr.aws_access_key_id:
+            # Allow IAM role-based auth (ECS Fargate, EC2, etc.) — boto3 can get creds from instance metadata
+            has_explicit_keys = self.config.ocr.aws_access_key_id and self.config.ocr.aws_secret_access_key
+            has_iam_role = False
+            if not has_explicit_keys:
+                try:
+                    import boto3
+                    session = boto3.Session()
+                    creds = session.get_credentials()
+                    has_iam_role = creds is not None
+                except Exception:
+                    has_iam_role = False
+            if not has_explicit_keys and not has_iam_role:
                 errors.append("AWS access key ID is required for AWS services")
-            if not self.config.ocr.aws_secret_access_key:
                 errors.append("AWS secret access key is required for AWS services")
 
         if self.config.ocr.preferred_engine == "azure_ocr":

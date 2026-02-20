@@ -49,8 +49,14 @@ class Project(Base):
     status = Column(
         String(50), nullable=False, default="draft"
     )  # draft, processing, completed, submitted, approved, rejected
+    approval_status = Column(String(50), nullable=True)  # pending, approved, rejected
     version = Column(Integer, default=1)
     notes = Column(Text, nullable=True)
+    files_metadata = Column(JSONB, nullable=True)  # [{name, path, size}]
+    pending_snapshot_json = Column(JSONB, nullable=True)  # Snapshot for supervisor review
+    pending_snapshot_html = Column(Text, nullable=True)  # HTML snapshot
+    assigned_supervisor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    review_note = Column(Text, nullable=True)
     submitted_at = Column(DateTime(timezone=True), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
     approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
@@ -60,7 +66,11 @@ class Project(Base):
     # Relationships
     owner = relationship("User", foreign_keys=[owner_id], back_populates="projects")
     approver = relationship("User", foreign_keys=[approved_by])
+    assigned_supervisor = relationship("User", foreign_keys=[assigned_supervisor_id])
     documents = relationship("DocumentProcessing", back_populates="project")
+    project_notes = relationship("ProjectNote", back_populates="project", cascade="all, delete-orphan")
+    remarks = relationship("ProjectRemark", back_populates="project", cascade="all, delete-orphan")
+    result_edits = relationship("ResultEdit", back_populates="project", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_projects_owner_status", "owner_id", "status"),
@@ -196,4 +206,96 @@ class AnalyticsEvent(Base):
         Index("ix_analytics_event_type", "event_type"),
         Index("ix_analytics_created", "created_at"),
         Index("ix_analytics_user", "user_id"),
+    )
+
+
+class ProjectNote(Base):
+    """Notes attached to a project."""
+    __tablename__ = "project_notes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    project = relationship("Project", back_populates="project_notes")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("ix_project_notes_project", "project_id"),
+    )
+
+
+class ProjectRemark(Base):
+    """Row-level remarks on project results."""
+    __tablename__ = "project_remarks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    project_hash = Column(String(255), nullable=False, index=True)
+    row_id = Column(String(255), nullable=False)
+    remark_text = Column(Text, nullable=False)
+    created_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by_full_name = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    project = relationship("Project", back_populates="remarks")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("ix_remarks_project_hash", "project_hash"),
+        Index("ix_remarks_row", "project_hash", "row_id"),
+    )
+
+
+class ResultEdit(Base):
+    """Audit trail for all edits to processing results."""
+    __tablename__ = "result_edits"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    project_hash = Column(String(255), nullable=False, index=True)
+    row_id = Column(String(255), nullable=False)
+    column_name = Column(String(255), nullable=False)
+    old_value = Column(Text, nullable=True)
+    new_value = Column(Text, nullable=True)
+    edited_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    edited_by_full_name = Column(String(255), nullable=True)
+    question_id = Column(Integer, nullable=True)
+    question_text = Column(Text, nullable=True)
+    category = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    project = relationship("Project", back_populates="result_edits")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("ix_result_edits_project_hash", "project_hash"),
+        Index("ix_result_edits_row", "project_hash", "row_id"),
+    )
+
+
+class FeedbackSurvey(Base):
+    """User feedback surveys."""
+    __tablename__ = "feedback_surveys"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    data = Column(JSONB, nullable=True)
+    status = Column(String(20), default="draft")  # draft, submitted
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("ix_feedback_surveys_user", "user_id"),
     )
