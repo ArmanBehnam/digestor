@@ -101,6 +101,7 @@ class DocumentProcessing(Base):
     confidence_avg = Column(Float, nullable=True)
     fallback_reason = Column(Text, nullable=True)  # Why AWS fallback was triggered
     processing_time_ms = Column(Integer, nullable=True)
+    extracted_text = Column(Text, nullable=True)  # Browser-extracted text stored for combined multi-PDF processing
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

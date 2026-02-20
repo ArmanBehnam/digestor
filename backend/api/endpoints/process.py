@@ -78,6 +78,9 @@ async def process_document(
 
     doc.processing_mode = req.processing_mode
     doc.status = "queued"
+    # Save extracted text for future combined multi-PDF processing
+    if req.extracted_text:
+        doc.extracted_text = req.extracted_text
     await db.flush()
 
     # --- DEEP MODE: Skip PDF.js, go directly to AWS ---

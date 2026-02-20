@@ -24,6 +24,7 @@ from api.endpoints import (
     upload,
     process,
     process_aws,
+    process_project,
     chat,
     projects,
     results,
@@ -81,6 +82,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(upload.router, prefix="/api", tags=["upload"])
 app.include_router(process.router, prefix="/api", tags=["process"])
 app.include_router(process_aws.router, prefix="/api", tags=["process-aws"])
+app.include_router(process_project.router, prefix="/api", tags=["process-project"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(projects.router, prefix="/api", tags=["projects"])
 app.include_router(results.router, prefix="/api", tags=["results"])

@@ -292,6 +292,22 @@ class ApiClient {
     });
   }
 
+  // --- Combined Project Processing ---
+  async processProject(data: {
+    project_id: string;
+    documents: Array<{ document_id: string; extracted_text: string }>;
+    processing_mode?: string;
+  }) {
+    return this.request<any>('/process-project', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getProjectResults(projectId: string) {
+    return this.request<any>(`/results/project/${projectId}`);
+  }
+
   // --- Results ---
   async getResults(documentId: string) {
     return this.request<any>(`/results/${documentId}`);

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from api.dependencies import get_db, get_current_user
-from db.models import DocumentProcessing, UserFeedback, User
+from db.models import DocumentProcessing, Project, UserFeedback, User
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -63,6 +63,76 @@ async def get_results(
         "fallback_reason": doc.fallback_reason,
         "results": doc.results or [],
         "feedback": feedbacks,
+    }
+
+
+@router.get("/results/project/{project_id}")
+async def get_project_results(
+    project_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get combined processing results for a project (all documents merged)."""
+    project_stmt = select(Project).where(
+        Project.id == uuid.UUID(project_id)
+    )
+    project = (await db.execute(project_stmt)).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Get all documents for status tracking
+    doc_stmt = (
+        select(DocumentProcessing)
+        .where(DocumentProcessing.project_id == uuid.UUID(project_id))
+        .order_by(DocumentProcessing.created_at.asc())
+    )
+    docs = (await db.execute(doc_stmt)).scalars().all()
+
+    # Determine overall status from all documents
+    statuses = [d.status for d in docs]
+    if all(s == "complete" for s in statuses):
+        overall_status = "complete"
+    elif any(s in ("failed", "error") for s in statuses):
+        overall_status = "error"
+    elif any(s in ("llm_processing", "queued", "ocr_processing") for s in statuses):
+        overall_status = "processing"
+    else:
+        overall_status = statuses[0] if statuses else "unknown"
+
+    # Prefer project-level combined results
+    results = project.pending_snapshot_json
+    if not results and docs:
+        # Fallback: use first complete document's results
+        for d in docs:
+            if d.results:
+                results = d.results
+                break
+
+    # Calculate aggregate metrics
+    avg_confidence = None
+    processing_time_ms = None
+    if docs:
+        confidences = [d.confidence_avg for d in docs if d.confidence_avg]
+        avg_confidence = sum(confidences) / len(confidences) if confidences else None
+        times = [d.processing_time_ms for d in docs if d.processing_time_ms]
+        processing_time_ms = max(times) if times else None
+
+    return {
+        "project_id": project_id,
+        "status": overall_status,
+        "results": results or [],
+        "confidence_avg": avg_confidence,
+        "processing_time_ms": processing_time_ms,
+        "documents": [
+            {
+                "document_id": str(d.id),
+                "file_name": d.file_name,
+                "status": d.status,
+                "processing_path": d.processing_path,
+                "fallback_reason": d.fallback_reason,
+            }
+            for d in docs
+        ],
     }
 
 

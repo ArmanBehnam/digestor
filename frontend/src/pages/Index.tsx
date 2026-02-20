@@ -801,9 +801,15 @@ const Index = () => {
       const hash = computeProjectHash(finalProjectName || `Project_${Date.now()}`, files);
       setProjectHash(hash);
 
+      // ============================================================
+      // PHASE 1: Upload ALL files and extract text from each
+      // ============================================================
+      const documentTexts: Array<{ document_id: string; extracted_text: string }> = [];
+      let serverProjectId: string | null = null;
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setProgress(10 + (i / files.length) * 80);
+        setProgress(10 + (i / files.length) * 30); // 10-40% for uploads
 
         // Upload file via apiClient
         const uploadData = await apiClient.uploadDocument(file, {
@@ -816,9 +822,10 @@ const Index = () => {
           throw new Error(`Failed to upload ${file.name}: No processing ID returned`);
         }
 
-        // Store the processing record ID from the first file
-        if (i === 0 && uploadData.processingId) {
+        // Capture project_id and first processingId
+        if (i === 0) {
           setProcessingRecordId(uploadData.processingId);
+          serverProjectId = uploadData.project_id;
         }
 
         // Store file metadata with path
@@ -832,22 +839,73 @@ const Index = () => {
           setFilesMetadata(prev => [...prev, fileMetadata]);
         }
 
-        // Parse document text
+        // Extract text from PDF (browser-side via PDF.js)
         setStage("extracting");
         const documentText = await extractTextFromPDF(file);
 
-        setStage("analyzing");
+        documentTexts.push({
+          document_id: uploadData.processingId,
+          extracted_text: documentText,
+        });
+      }
 
-        // Send for AI processing
-        await apiClient.processDocument(uploadData.processingId, documentText);
+      // ============================================================
+      // PHASE 2: Process — combined (multi-file) or single
+      // ============================================================
+      setStage("analyzing");
+      setProgress(45);
 
-        // Poll the API for status updates
+      let finalResults: AnalysisResult[] | null = null;
+
+      if (files.length > 1 && serverProjectId) {
+        // ----- MULTI-FILE: Combined project processing -----
+        // Sends ALL extracted text to backend, which combines and runs LLM once
+        await apiClient.processProject({
+          project_id: serverProjectId,
+          documents: documentTexts,
+        });
+
+        // Poll project-level results
+        const MAX_POLL_ATTEMPTS = 3600;
+        let pollAttempts = 0;
+
+        while (pollAttempts < MAX_POLL_ATTEMPTS) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          let statusData: any;
+          try {
+            statusData = await apiClient.getProjectResults(serverProjectId);
+          } catch (err) {
+            console.error('Error polling project status:', err);
+            pollAttempts++;
+            continue;
+          }
+
+          setProgress(50 + Math.min((pollAttempts / 60) * 40, 45)); // 50-95%
+
+          if (statusData.status === 'complete') {
+            finalResults = statusData.results;
+            break;
+          } else if (statusData.status === 'error') {
+            throw new Error('Processing failed');
+          }
+
+          pollAttempts++;
+        }
+
+        if (pollAttempts >= MAX_POLL_ATTEMPTS) {
+          throw new Error('Processing timed out after 60 minutes.');
+        }
+      } else {
+        // ----- SINGLE FILE: Existing per-document processing -----
+        const singleDoc = documentTexts[0];
+        await apiClient.processDocument(singleDoc.document_id, singleDoc.extracted_text);
+
         const MAX_POLL_ATTEMPTS = 3600;
         const STALE_THRESHOLD = 10 * 60 * 1000;
         const PROGRESS_SAVED_STALE_THRESHOLD = 3 * 60 * 1000;
         const MAX_AUTO_RETRIES = 20;
         let pollAttempts = 0;
-        let processingResults = null;
         let lastActivityTime = Date.now();
         let lastStatus = '';
         let lastUpdatedAt = 0;
@@ -858,7 +916,7 @@ const Index = () => {
 
           let statusData: any;
           try {
-            statusData = await apiClient.getResults(uploadData.processingId);
+            statusData = await apiClient.getResults(singleDoc.document_id);
           } catch (err) {
             console.error('Error polling status:', err);
             pollAttempts++;
@@ -880,7 +938,7 @@ const Index = () => {
           if (needsResume) {
             autoRetryCount++;
             if (autoRetryCount <= MAX_AUTO_RETRIES) {
-              await apiClient.processDocument(uploadData.processingId, documentText);
+              await apiClient.processDocument(singleDoc.document_id, singleDoc.extracted_text);
               lastActivityTime = Date.now();
               continue;
             } else {
@@ -904,7 +962,7 @@ const Index = () => {
             if (staleDuration > effectiveThreshold && isProcessingState) {
               if (editState?.canResume && autoRetryCount < MAX_AUTO_RETRIES) {
                 autoRetryCount++;
-                await apiClient.processDocument(uploadData.processingId, documentText);
+                await apiClient.processDocument(singleDoc.document_id, singleDoc.extracted_text);
                 lastActivityTime = Date.now();
                 continue;
               }
@@ -915,16 +973,14 @@ const Index = () => {
           // Update progress bar based on chunks
           if (statusData.total_chunks && statusData.processed_chunks) {
             const chunkProgress = (statusData.processed_chunks / statusData.total_chunks) * 100;
-            const fileProgress = 10 + (i / files.length) * 80;
-            const overallProgress = fileProgress + (chunkProgress / files.length) * 0.8;
-            setProgress(Math.min(overallProgress, 95));
+            setProgress(10 + chunkProgress * 0.8);
           }
 
           const isComplete = statusData.status === 'complete' ||
             (statusData.status?.includes('AI analysis complete') && statusData.results);
 
           if (isComplete) {
-            processingResults = statusData.results;
+            finalResults = statusData.results;
             break;
           } else if (statusData.status === 'error') {
             throw new Error(statusData.error || 'Processing failed');
@@ -936,13 +992,9 @@ const Index = () => {
         if (pollAttempts >= MAX_POLL_ATTEMPTS) {
           throw new Error('Processing timed out after 60 minutes. Document may be too large.');
         }
-
-        fileResults.push(processingResults || []);
       }
 
-      const aggregatedResults = aggregateMultipleFileResults(fileResults);
-
-      setResults(aggregatedResults);
+      setResults(finalResults || []);
       setProjectName(finalProjectName || `Project_${Date.now()}`);
       setProgress(100);
       setStage("complete");
