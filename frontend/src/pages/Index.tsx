@@ -798,7 +798,9 @@ const Index = () => {
 
       // Process all files and collect their results
       const fileResults: AnalysisResult[][] = [];
-      const hash = computeProjectHash(finalProjectName || `Project_${Date.now()}`, files);
+      // Generate a stable project name ONCE for all files (prevents separate projects)
+      const stableProjectName = finalProjectName || `Project_${Date.now()}`;
+      const hash = computeProjectHash(stableProjectName, files);
       setProjectHash(hash);
 
       // ============================================================
@@ -812,9 +814,11 @@ const Index = () => {
         setProgress(10 + (i / files.length) * 30); // 10-40% for uploads
 
         // Upload file via apiClient
+        // After first upload, pass project_id so subsequent files join the SAME project
         const uploadData = await apiClient.uploadDocument(file, {
           projectHash: hash,
-          projectName: finalProjectName,
+          projectName: stableProjectName,
+          project_id: serverProjectId || undefined,
           filesMetadata: filesMetadataArray,
         });
 
@@ -995,7 +999,7 @@ const Index = () => {
       }
 
       setResults(finalResults || []);
-      setProjectName(finalProjectName || `Project_${Date.now()}`);
+      setProjectName(stableProjectName);
       setProgress(100);
       setStage("complete");
 

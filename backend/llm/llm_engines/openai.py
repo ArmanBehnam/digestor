@@ -151,10 +151,20 @@ For accurate location tracking, always quote the EXACT text from the document th
 
                     answer = self._clean_answer_text(answer, question)
 
-                    is_not_found = any(phrase in answer.lower() for phrase in [
-                        'not found', 'not specified', 'not mentioned', 'not explicitly',
-                        'does not reference', 'no information', 'not provided',
-                        'not stated', 'not indicated', 'cannot be determined', 'not given'])
+                    answer_lower = answer.lower().strip()
+                    is_not_found = (
+                        answer_lower in ('n/a', 'na', 'not found', 'none', 'not applicable', '-', '--', '')
+                        or any(phrase in answer_lower for phrase in [
+                            'not found', 'not specified', 'not mentioned', 'not explicitly',
+                            'does not reference', 'no information', 'not provided',
+                            'not stated', 'not indicated', 'cannot be determined', 'not given',
+                            'not available', 'unable to locate', 'unable to determine',
+                            'unable to find', 'no specific mention', 'not included',
+                            'does not contain', 'does not specify', 'does not mention',
+                            'does not include', 'not referenced', 'not addressed',
+                            'no mention', 'no reference', 'not discussed', 'not identified',
+                        ])
+                    )
 
                     if is_not_found:
                         final_answer = "Not Found"
