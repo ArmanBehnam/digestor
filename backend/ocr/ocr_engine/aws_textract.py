@@ -4,8 +4,8 @@ import numpy as np
 import cv2
 
 from ocr.ocr_engine.base import BaseOCREngine
-from ocr.core.models import ExtractedElement, BoundingBox
-from ocr.core.exceptions import OCRCredentialsError, OCRConfigurationError, OCRExtractionError, DependencyError
+from ocr.core.models import ExtractedElement
+from ocr.core.exceptions import OCRCredentialsError, OCRExtractionError, DependencyError
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class AWSTextractEngine(BaseOCREngine):
         try:
             import boto3
             from botocore.config import Config
-            from botocore.exceptions import NoCredentialsError, ClientError
+            from botocore.exceptions import NoCredentialsError, ClientError  # noqa: F401
             region = self.config.get('ocr.aws_region', 'us-east-1')
             access_key = self.config.get('ocr.aws_access_key_id')
             secret_key = self.config.get('ocr.aws_secret_access_key')

@@ -2,7 +2,7 @@
 
 
 from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 from enum import Enum
 import uuid
@@ -10,7 +10,7 @@ import uuid
 
 class ElementType(Enum):
     TEXT = "text"
-    TABLE = "table" 
+    TABLE = "table"
     IMAGE = "image"
     DRAWING = "drawing"
     DIMENSION = "dimension"
@@ -41,13 +41,13 @@ class BoundingBox:
     width: float
     height: float
     confidence: float = 0.0
-    
+
     def area(self) -> float:
         return self.width * self.height
-    
+
     def center(self) -> tuple[float, float]:
         return (self.x + self.width / 2, self.y + self.height / 2)
-    
+
     def intersects(self, other: 'BoundingBox') -> bool:
         return not (
             self.x + self.width < other.x or
@@ -55,19 +55,19 @@ class BoundingBox:
             self.y + self.height < other.y or
             other.y + other.height < self.y
         )
-    
+
     def iou(self, other: 'BoundingBox') -> float:
         if not self.intersects(other):
             return 0.0
-        
+
         x1 = max(self.x, other.x)
         y1 = max(self.y, other.y)
         x2 = min(self.x + self.width, other.x + other.width)
         y2 = min(self.y + self.height, other.y + other.height)
-        
+
         intersection = (x2 - x1) * (y2 - y1)
         union = self.area() + other.area() - intersection
-        
+
         return intersection / union if union > 0 else 0.0
 
     def to_dict(self) -> Dict[str, Any]:
@@ -88,7 +88,7 @@ class ExtractedElement:
     bbox: Optional[BoundingBox] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     element_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    
+
     def to_dict(self) -> Dict[str, Any]:
         result = asdict(self)
         result['element_type'] = self.element_type.value
@@ -102,7 +102,7 @@ class TableCell:
     col_index: int
     bbox: Optional[BoundingBox] = None
     confidence: float = 0.0
-    
+
     def is_empty(self) -> bool:
         return not self.content or self.content.isspace()
 
@@ -117,12 +117,12 @@ class SpatialTable:
     structure_type: str = "standard"
     table_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     cells: List[TableCell] = field(default_factory=list)
-    
+
     def get_cell(self, row: int, col: int) -> Optional[str]:
         if 0 <= row < len(self.rows) and 0 <= col < len(self.rows[row]):
             return self.rows[row][col]
         return None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'table_id': self.table_id,
@@ -159,7 +159,7 @@ class ProcessingMetrics:
     low_confidence_elements: int = 0
     processing_time: float = 0.0
     memory_usage: float = 0.0
-    
+
     def update_from_elements(self, elements: List[ExtractedElement]) -> None:
         self.total_elements = len(elements)
         if not elements:
@@ -167,12 +167,12 @@ class ProcessingMetrics:
 
         type_counts = {}
         confidences = []
-        
+
         for element in elements:
             element_type = element.element_type.value
             type_counts[element_type] = type_counts.get(element_type, 0) + 1
             confidences.append(element.confidence)
-        
+
         self.text_elements = type_counts.get('text', 0)
         self.table_elements = type_counts.get('table', 0)
         self.image_elements = type_counts.get('image', 0)
@@ -203,23 +203,23 @@ class ExtractionResult:
 
     metadata: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def __post_init__(self):
         self.processing_metrics.update_from_elements(self.elements)
-    
+
     def add_element(self, element: ExtractedElement) -> None:
         self.elements.append(element)
         self.processing_metrics.update_from_elements(self.elements)
-    
+
     def add_table(self, table: SpatialTable) -> None:
         self.tables.append(table)
-    
+
     def get_elements_by_type(self, element_type: ElementType) -> List[ExtractedElement]:
         return [e for e in self.elements if e.element_type == element_type]
-    
+
     def get_elements_by_page(self, page_number: int) -> List[ExtractedElement]:
         return [e for e in self.elements if e.page_number == page_number]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'document_id': self.document_id,
@@ -249,15 +249,15 @@ class OCRMetrics:
     iou_scores: List[float] = field(default_factory=list)
     field_accuracy: Dict[str, float] = field(default_factory=dict)
     technical_accuracy: Dict[str, float] = field(default_factory=dict)
-    
+
     def overall_score(self) -> float:
 
         text_score = max(0, 100 - (self.cer + self.wer) / 2)
         spatial_score = (sum(self.iou_scores) / len(self.iou_scores) * 100) if self.iou_scores else 50
         field_score = (sum(self.field_accuracy.values()) / len(self.field_accuracy)) if self.field_accuracy else 50
-        
+
         return (text_score * 0.5 + spatial_score * 0.3 + field_score * 0.2)
-    
+
     def quality_grade(self) -> str:
         if self.cer <= 2 and self.wer <= 5:
             return "EXCELLENT"
@@ -279,7 +279,7 @@ class GroundTruthData:
     metadata: Dict[str, Any] = field(default_factory=dict)
     creation_date: datetime = field(default_factory=datetime.now)
     annotator: str = "unknown"
-    
+
     def validate(self) -> bool:
         return bool(self.reference_text and self.source_file)
 

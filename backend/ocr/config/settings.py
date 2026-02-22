@@ -3,12 +3,11 @@
 import os
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
-import logging
 
 from ocr.core.interfaces import ConfigurationManager
-from ocr.core.exceptions import ConfigurationError, MissingConfigurationError, InvalidConfigurationError, ConfigurationValidationError
+from ocr.core.exceptions import ConfigurationError, InvalidConfigurationError, ConfigurationValidationError
 
 
 
@@ -51,12 +50,12 @@ class ProcessingConfig:
     use_table_detection: bool = True
     use_spatial_analysis: bool = True
     use_pattern_extraction: bool = True
-    
+
     image_scale_factor: float = 2.0
     image_enhancement_alpha: float = 1.2
     image_enhancement_beta: int = 10
     max_image_size: int = 10 * 1024 * 1024  # 10MB
-    
+
     table_min_area: int = 1000
     table_line_kernel_size: int = 40
     table_confidence_threshold: float = 0.7
@@ -75,14 +74,14 @@ class EvaluationConfig:
     calculate_iou: bool = True
     calculate_field_accuracy: bool = True
     calculate_technical_accuracy: bool = True
-    
+
     excellent_cer_threshold: float = 2.0
     excellent_wer_threshold: float = 5.0
     good_cer_threshold: float = 5.0
     good_wer_threshold: float = 10.0
     moderate_cer_threshold: float = 10.0
     moderate_wer_threshold: float = 20.0
-    
+
     iou_threshold_50: float = 0.5
     iou_threshold_75: float = 0.75
 
@@ -149,7 +148,7 @@ class ApplicationConfig:
     cache: CacheConfig = field(default_factory=CacheConfig)
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
     security: SecurityConfig = field(default_factory=SecurityConfig)
-    
+
     debug: bool = False
     version: str = "1.0.0"
     environment: str = "production"
@@ -161,7 +160,7 @@ class ConfigManager(ConfigurationManager):
         self.config_path = config_path
         self.config = ApplicationConfig()
         self._load_config()
-    
+
     def _load_config(self) -> None:
         self._load_from_environment()
 
@@ -173,7 +172,7 @@ class ConfigManager(ConfigurationManager):
             self._load_from_file(default_config)
 
         self.validate_config()
-    
+
     def _load_from_environment(self) -> None:
 
         if os.getenv("AWS_ACCESS_KEY_ID"):
@@ -208,19 +207,19 @@ class ConfigManager(ConfigurationManager):
             self.config.cache.redis_host = os.getenv("REDIS_HOST")
         if os.getenv("REDIS_PORT"):
             self.config.cache.redis_port = int(os.getenv("REDIS_PORT"))
-    
+
     def _load_from_file(self, config_path: Path) -> None:
         try:
             with open(config_path, 'r') as f:
                 file_config = json.load(f)
-            
+
             self._merge_config(file_config)
-            
+
         except json.JSONDecodeError as e:
             raise InvalidConfigurationError("config_file", str(e), "valid JSON")
         except Exception as e:
             raise ConfigurationError(f"Failed to load config from {config_path}: {e}")
-    
+
     def _merge_config(self, file_config: Dict[str, Any]) -> None:
 
         if "ocr" in file_config:
@@ -256,25 +255,25 @@ class ConfigManager(ConfigurationManager):
         for key in ["debug", "environment", "version"]:
             if key in file_config:
                 setattr(self.config, key, file_config[key])
-    
+
     def load_config(self, config_path: Optional[Path] = None) -> Dict[str, Any]:
         if config_path:
             self.config_path = config_path
             self._load_config()
-        
+
         return self.to_dict()
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         keys = key.split('.')
         current = self.config
-        
+
         try:
             for k in keys:
                 current = getattr(current, k)
             return current
         except AttributeError:
             return default
-    
+
     def set(self, key: str, value: Any) -> None:
         keys = key.split('.')
         current = self.config
@@ -287,9 +286,9 @@ class ConfigManager(ConfigurationManager):
         final_key = keys[-1]
         if not hasattr(current, final_key):
             raise InvalidConfigurationError(key, value, "existing configuration key")
-        
+
         setattr(current, final_key, value)
-    
+
     def validate_config(self) -> bool:
         errors = []
 
@@ -320,7 +319,7 @@ class ConfigManager(ConfigurationManager):
 
         if not 0 <= self.config.ocr.confidence_threshold <= 1:
             errors.append("OCR confidence threshold must be between 0 and 1")
-        
+
         if not 0 <= self.config.evaluation.iou_threshold_50 <= 1:
             errors.append("IoU threshold must be between 0 and 1")
 
@@ -331,12 +330,12 @@ class ConfigManager(ConfigurationManager):
 
         if self.config.export.default_format not in self.config.export.supported_formats:
             errors.append("Default export format must be in supported formats")
-        
+
         if errors:
             raise ConfigurationValidationError(errors, [])
-        
+
         return True
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "ocr": {
@@ -381,13 +380,13 @@ class ConfigManager(ConfigurationManager):
             "environment": self.config.environment,
             "version": self.config.version
         }
-    
+
     def save_config(self, output_path: Path) -> None:
         config_dict = self.to_dict()
-        
+
         with open(output_path, 'w') as f:
             json.dump(config_dict, f, indent=2)
-    
+
     def create_default_config(self, output_path: Path) -> None:
         default_config = ApplicationConfig()
         config_dict = {
@@ -416,7 +415,7 @@ class ConfigManager(ConfigurationManager):
                 "console_output": default_config.logging.console_output
             }
         }
-        
+
         with open(output_path, 'w') as f:
             json.dump(config_dict, f, indent=2)
 

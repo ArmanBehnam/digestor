@@ -4,7 +4,6 @@ from typing import Dict, List, Any
 import re
 import logging
 import openai
-import ssl
 import httpx
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -43,7 +42,7 @@ class OpenAIEngine(BaseLLMEngine):
             test_response = self.client.chat.completions.create(model=self.model, messages=[{"role": "user", "content": "Test"}], max_tokens=10)
 
             self.is_available = True
-            logger.info(f"OpenAI GPT-4o engine initialized successfully")
+            logger.info("OpenAI GPT-4o engine initialized successfully")
             return True
 
         except Exception as e:
@@ -54,7 +53,7 @@ class OpenAIEngine(BaseLLMEngine):
 
     def answer_questions(self, page_text: str, questions: List[str], prompt_engineer=None) -> Dict[str, Dict[str, Any]]:
         if not self.is_available or not self.client:
-            raise RuntimeError(f"OpenAI engine not available")
+            raise RuntimeError("OpenAI engine not available")
 
         try:
             prompt = self._generate_coordinate_aware_prompt(page_text, questions, prompt_engineer)
@@ -108,7 +107,7 @@ class OpenAIEngine(BaseLLMEngine):
 
 **Search Strategies:**
 - **Building Codes**: Look for "IBC", "NYSBC", "ASCE 7-XX" with years
-- **Deflection**: Search for "L/240", "L/360", "deflection criteria"  
+- **Deflection**: Search for "L/240", "L/360", "deflection criteria"
 - **Wind/Snow Loads**: Find values with "mph", "psf", "ground snow load"
 - **Materials**: Look for "Grade", "ASTM", gauge measurements
 - **Seismic**: Search for "Sds", "Sd1", "site class", "seismic design"
@@ -116,7 +115,7 @@ class OpenAIEngine(BaseLLMEngine):
 Remember: Quote exactly from the document to enable precise coordinate mapping.'''
 
     def _add_coordinate_instructions(self, base_prompt: str, questions: List[str]) -> str:
-        coordinate_enhancement = """**COORDINATE MAPPING REQUIREMENT**: 
+        coordinate_enhancement = """**COORDINATE MAPPING REQUIREMENT**:
 For accurate location tracking, always quote the EXACT text from the document that contains your answer. Do not paraphrase or summarize - use the document's precise wording.
 
 **Format**: Q[number]. [EXACT_QUOTED_TEXT] | Page: [page] | Confidence: [%]%"""
@@ -196,7 +195,7 @@ For accurate location tracking, always quote the EXACT text from the document th
 
     def answer_single_question(self, question: str, ocr_result: Dict, relevant_pages: List[int]) -> Dict[str, Any]:
         if not self.is_available or not self.client:
-            raise RuntimeError(f"OpenAI engine not available")
+            raise RuntimeError("OpenAI engine not available")
         try:
             pages_data = ocr_result.get('pages') or ocr_result.get('filtered_pages_only', [])
             combined_text = ""
@@ -220,7 +219,7 @@ For accurate location tracking, always quote the EXACT text from the document th
     def answer_questions_with_custom_prompt(self, page_text: str, questions: List[str], custom_prompt: str) -> Dict[
         str, Dict[str, Any]]:
         if not self.is_available or not self.client:
-            raise RuntimeError(f"OpenAI engine not available")
+            raise RuntimeError("OpenAI engine not available")
         try:
             full_prompt = f"{custom_prompt}\n\n**JSON DATA:**\n{page_text}"
             estimated_tokens = len(full_prompt) // 3

@@ -1,14 +1,13 @@
 import time
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import List, Dict, Any, Optional, Tuple
-from pathlib import Path
 import numpy as np
 from ocr.utils.text_utils import TextProcessor
 
 from ocr.core.interfaces import OCREngine
 from ocr.core.models import ExtractedElement, BoundingBox, ElementType
-from ocr.core.exceptions import OCRError, OCREngineNotAvailableError, OCRExtractionError, OCRConfigurationError, TimeoutError
+from ocr.core.exceptions import OCREngineNotAvailableError, OCRExtractionError, TimeoutError
 from ocr.config.settings import get_config
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,5 @@
 # tasks.py
 import os
-import sys
 import boto3
 import asyncio
 import gc
@@ -9,7 +8,6 @@ import fitz
 import json
 import re
 from datetime import datetime
-from config.config_loader import CONFIG
 from core.batch_processor import merge_json_results, chunk_pages_by_tokens, generate_final_results_merged
 from agents.validation import ValidationAgent
 from rq import get_current_job
@@ -162,7 +160,7 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
         defaults_file = Path(__file__).parent / 'config' / 'deflection_defaults.csv'
         if defaults_file.exists():
             shutil.copy(defaults_file, Path(work_dir) / 'deflection_defaults.csv')
-            print(f"Copied deflection_defaults.csv to work directory")
+            print("Copied deflection_defaults.csv to work directory")
         update_progress(redis_conn, job_id, "setup", 10, f"Processing {len(file_keys)} PDF(s)")
         print(f"Project ID: {project_id or 'No project'}")
         print(f"Files: {len(file_keys)}")
@@ -500,9 +498,9 @@ def upload_results(s3, bucket, work_dir, project_id=None, metadata=None):
             project_meta = json.loads(response['Body'].read().decode('utf-8'))
             project_name = project_meta.get('name', project_id)
             print(f"Upload: project='{project_name}', version={version}")
-        except Exception as e:
+        except Exception:
             project_name = project_id
-            print(f"Upload: Using project_id as name")
+            print("Upload: Using project_id as name")
 
     uploaded = {}
     if project_id:

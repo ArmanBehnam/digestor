@@ -1,17 +1,14 @@
 # agents\orchestrator.py
-import asyncio
 import sys
-from typing import Dict, Any, List
+from typing import Dict, Any
 from pathlib import Path
 import pandas as pd
 from datetime import datetime
 from .base import Talk2DrawingsBaseAgent
 from .ocr import OCRAgent
 from .qa import EngineeringQAAgent
-from .validation import ValidationAgent
 from llm.utils import apply_deflection_defaults, normalize_answers_and_units, apply_deflection_defaults_with_coordinates, export_results_with_coordinates, format_coordinates_for_output
 import json
-import pandas as pd
 import re
 
 sys.path.append('..')
@@ -139,7 +136,7 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
         with open(json_path, 'w') as f:
             json.dump(json_results, f, indent=2)
 
-        print(f"Results saved:")
+        print("Results saved:")
         print(f"   CSV: {csv_path}")
         print(f"   JSON: {json_path}")
 
@@ -210,7 +207,7 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
         with open(json_path, 'w') as f:
             json.dump(json_results, f, indent=2)
 
-        print(f"Merged results saved:")
+        print("Merged results saved:")
         print(f"   CSV: {csv_path}")
         print(f"   JSON: {json_path}")
 
@@ -362,7 +359,7 @@ class OrchestratorAgent(Talk2DrawingsBaseAgent):
             import json
             json.dump(json_results, f, indent=2, default=str)
 
-        print(f"Results saved with coordinates:")
+        print("Results saved with coordinates:")
         print(f"   Standard CSV: {standard_csv_path}")
         print(f"   Coordinate CSV: {export_paths['csv_path']}")
         print(f"   Coordinate JSON: {export_paths['json_path']}")

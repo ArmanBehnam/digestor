@@ -1,7 +1,6 @@
 # ocr/processors/dwg_converter.py
 
 from pathlib import Path
-import subprocess
 import shutil
 import tempfile
 import os

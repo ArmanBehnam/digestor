@@ -1,10 +1,8 @@
 # agents\base.py
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
-from langchain_core.messages import BaseMessage
+from typing import Any, Dict
 import logging
-import asyncio
 
 logger = logging.getLogger(__name__)
 

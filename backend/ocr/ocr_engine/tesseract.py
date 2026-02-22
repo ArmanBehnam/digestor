@@ -1,13 +1,13 @@
 import logging
 import os
 import platform
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple
 import numpy as np
 import cv2
 from ocr.utils.text_utils import TextProcessor
 from ocr.ocr_engine.base import BaseOCREngine
 from ocr.core.models import ExtractedElement
-from ocr.core.exceptions import OCRConfigurationError, OCRExtractionError, DependencyError
+from ocr.core.exceptions import OCRExtractionError, DependencyError
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,8 @@
 # agents\ocr.py
 
-import asyncio
 import sys
-import os
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any
 from pathlib import Path
 
 sys.path.append('..')

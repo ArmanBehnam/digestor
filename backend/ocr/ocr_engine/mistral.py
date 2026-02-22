@@ -7,8 +7,8 @@ import numpy as np
 import cv2
 
 from ocr.ocr_engine.base import BaseOCREngine
-from ocr.core.models import ExtractedElement, BoundingBox
-from ocr.core.exceptions import OCRCredentialsError, OCRConfigurationError, OCRExtractionError, DependencyError
+from ocr.core.models import ExtractedElement
+from ocr.core.exceptions import OCRCredentialsError, OCRExtractionError, DependencyError
 
 logger = logging.getLogger(__name__)
 
@@ -271,7 +271,7 @@ class MistralOCREngine(BaseOCREngine):
                     'rows': table_rows,
                     'headers': table_rows[0] if table_rows else [],
                     'confidence': 0.6,
-                    'table_id': f"mistral_detected_table_0",
+                    'table_id': "mistral_detected_table_0",
                     'cell_count': len(table_elements),
                     'detection_method': 'text_alignment'
                 }

@@ -1,5 +1,26 @@
 # Digestor Unified - Setup & Configuration Instructions
 
+## Live App URL
+
+| Item | Value |
+|------|-------|
+| **App URL** | **https://r2jmucqgrt.us-east-1.awsapprunner.com** |
+| Hosting | AWS App Runner (service: `digetor-web`) |
+| ECR Image | `800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor` |
+
+## Test Users (Cognito)
+
+| Email | Role | Password |
+|-------|------|----------|
+| `admin@digestor-test.com` | Admin | *(set during first login)* |
+| `supervisor@digestor-test.com` | Supervisor | *(set during first login)* |
+| `engineer@digestor-test.com` | Engineer | *(set during first login)* |
+
+> If you forgot the password, reset it via AWS Cognito Console:
+> https://us-east-1.console.aws.amazon.com/cognito/v2/idp/user-pools/us-east-1_DGMrbW6Vw/user-management/users
+
+---
+
 ## AWS Account & Region
 
 | Item | Value |
@@ -141,17 +162,28 @@ REDIS_URL=redis://<endpoint>:6379          # production
 
 | Item | Value |
 |------|-------|
-| Repository | `digestor-unified-dev` |
-| Full URI | `800712212732.dkr.ecr.us-east-1.amazonaws.com/digestor-unified-dev` |
+| Repository | `digetor` |
+| Full URI | `800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor` |
 | Scan on push | Enabled |
 
 **Push commands:**
 ```bash
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 800712212732.dkr.ecr.us-east-1.amazonaws.com
-docker build -t digestor-unified-dev -f infrastructure/docker/Dockerfile .
-docker tag digestor-unified-dev:latest 800712212732.dkr.ecr.us-east-1.amazonaws.com/digestor-unified-dev:latest
-docker push 800712212732.dkr.ecr.us-east-1.amazonaws.com/digestor-unified-dev:latest
+docker build -t digetor -f infrastructure/docker/Dockerfile .
+docker tag digetor:latest 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest
+docker push 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest
 ```
+
+---
+
+## AWS App Runner (Current Deployment)
+
+| Item | Value |
+|------|-------|
+| Service name | `digetor-web` |
+| Service URL | `https://r2jmucqgrt.us-east-1.awsapprunner.com` |
+| Source | ECR image `800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor` |
+| Console | `https://us-east-1.console.aws.amazon.com/apprunner/home?region=us-east-1#/services` |
 
 ---
 

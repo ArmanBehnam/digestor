@@ -172,7 +172,7 @@ class ConfigurationValidationError(ValidationError):
             errors.append(f"Missing keys: {', '.join(missing_keys)}")
         if invalid_values:
             errors.append(f"Invalid values: {', '.join(invalid_values)}")
-        
+
         message = f"Configuration validation failed: {'; '.join(errors)}"
         context = {"missing_keys": missing_keys, "invalid_values": invalid_values or []}
         super().__init__(message, context)

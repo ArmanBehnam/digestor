@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 import re
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 
 def parse_construction_json_to_dataframe(json_data: Dict[str, Any]) -> pd.DataFrame:

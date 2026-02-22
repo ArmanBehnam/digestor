@@ -1,10 +1,10 @@
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple
 import numpy as np
 
 from ocr.ocr_engine.base import BaseOCREngine
 from ocr.core.models import ExtractedElement
-from ocr.core.exceptions import OCRExtractionError, DependencyError
+from ocr.core.exceptions import DependencyError
 
 logger = logging.getLogger(__name__)
 

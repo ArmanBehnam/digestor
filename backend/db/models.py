@@ -4,10 +4,9 @@ Maps to AWS RDS PostgreSQL schema.
 """
 
 import uuid
-from datetime import datetime
 from sqlalchemy import (
     Column, String, Text, Integer, Float, Boolean, DateTime,
-    ForeignKey, JSON, Enum as SAEnum, Index, UniqueConstraint,
+    ForeignKey, Index, UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import DeclarativeBase, relationship

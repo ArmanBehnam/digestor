@@ -1,7 +1,7 @@
 # ocr/stages/base.py
 
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Dict, Any, List
 from ocr.core.interfaces import ProcessingStage
 logger = logging.getLogger(__name__)
@@ -14,31 +14,31 @@ class BaseProcessingStage(ProcessingStage):
         self._dependencies = dependencies or []
         self._optional = optional
         self.logger = logging.getLogger(f"{__name__}.{name}")
-    
+
     @property
     def name(self) -> str:
         return self._name
-    
+
     @property
     def dependencies(self) -> List[str]:
         return self._dependencies
-    
+
     @property
     def optional(self) -> bool:
         return self._optional
-    
+
     def validate_input(self, data: Dict[str, Any]) -> bool:
         required_keys = ['input_path', 'result', 'config']
         return all(key in data for key in required_keys)
-    
+
     @abstractmethod
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         pass
-    
+
     def _log_stage_start(self, context: Dict[str, Any]) -> None:
         filename = context.get('input_path', 'unknown').name if hasattr(context.get('input_path'), 'name') else 'unknown'
         self.logger.debug(f"Starting {self.name} stage for {filename}")
-    
+
     def _log_stage_complete(self, context: Dict[str, Any], **metrics) -> None:
         filename = context.get('input_path', 'unknown').name if hasattr(context.get('input_path'), 'name') else 'unknown'
         metric_str = ', '.join(f"{k}={v}" for k, v in metrics.items())
@@ -51,7 +51,7 @@ class PDFTextStage(BaseProcessingStage):
     def __init__(self, pdf_extractor):
         super().__init__("pdf_text", dependencies=[])
         self.pdf_extractor = pdf_extractor
-    
+
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self._log_stage_start(context)
         input_path = context['input_path']
@@ -76,12 +76,12 @@ class OCRStage(BaseProcessingStage):
         super().__init__("ocr", dependencies=["pdf_text"], optional=True)
         self.ocr_registry = ocr_registry
         self.image_processor = image_processor
-    
+
     def validate_input(self, data: Dict[str, Any]) -> bool:
         base_valid = super().validate_input(data)
         use_ocr = data.get('use_ocr', True)
         return base_valid and use_ocr
-    
+
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self._log_stage_start(context)
         input_path = context['input_path']
@@ -99,7 +99,7 @@ class OCRStage(BaseProcessingStage):
 
                 elements = self.ocr_registry.extract_with_fallback(image, page_num)
                 all_elements.extend(elements)
-                
+
             except Exception as e:
                 self.logger.warning(f"OCR failed for page {page_num}: {e}")
                 continue
@@ -139,7 +139,7 @@ class TableStage(BaseProcessingStage):
         super().__init__("table_extraction", dependencies=["pdf_text"], optional=True)
         self.table_extractor = table_extractor
         self.image_processor = image_processor
-    
+
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self._log_stage_start(context)
         result = context['result']
@@ -166,7 +166,7 @@ class PatternStage(BaseProcessingStage):
     def __init__(self, pattern_processor):
         super().__init__("pattern_extraction", dependencies=["pdf_text"])
         self.pattern_processor = pattern_processor
-    
+
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self._log_stage_start(context)
         result = context['result']
@@ -185,7 +185,7 @@ class SpatialStage(BaseProcessingStage):
     def __init__(self, spatial_analyzer):
         super().__init__("spatial_analysis", dependencies=["ocr"], optional=True)
         self.spatial_analyzer = spatial_analyzer
-    
+
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self._log_stage_start(context)
         result = context['result']
@@ -200,7 +200,7 @@ class ClassificationStage(BaseProcessingStage):
     def __init__(self, document_classifier):
         super().__init__("classification", dependencies=["pattern_extraction"])
         self.document_classifier = document_classifier
-    
+
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self._log_stage_start(context)
         result = context['result']
@@ -215,7 +215,7 @@ class FinalizationStage(BaseProcessingStage):
 
     def __init__(self):
         super().__init__("finalization", dependencies=["pdf_text"])
-    
+
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self._log_stage_start(context)
         result = context['result']

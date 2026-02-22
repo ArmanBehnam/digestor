@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: digestor-unified-dev
+  ECR_REPOSITORY: digetor
   ECS_CLUSTER: digestor-dev
   WEB_SERVICE: digestor-web-dev
   WORKER_SERVICE: digestor-worker-dev

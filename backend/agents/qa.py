@@ -1,7 +1,6 @@
 # agents\qa.py
-import asyncio
 import sys
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .base import Talk2DrawingsBaseAgent
 from llm.coordinate_mapper import CoordinateMapper
 import re

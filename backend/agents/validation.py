@@ -3,7 +3,7 @@
 import re
 import json
 import sys
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, Tuple
 from pathlib import Path
 import pandas as pd
 from .base import Talk2DrawingsBaseAgent

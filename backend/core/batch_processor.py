@@ -2,18 +2,13 @@
 
 import asyncio
 import argparse
-import os
 import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, List
 import pandas as pd
 from datetime import datetime
-from llm.utils import apply_deflection_defaults
 from core.workflow import Talk2DrawingsWorkflow
 from agents.validation import ValidationAgent
-from core.workflow import Talk2DrawingsWorkflow
-from agents.validation import ValidationAgent
-from llm.utils import normalize_answers_and_units
 
 current_dir = Path(__file__).parent.parent
 import sys
@@ -87,7 +82,7 @@ async def process_directory_merged(directory_path, prompt_engineering=True, enab
         print("ValidationAgent not available, skipping validation")
         validation_agent = None
 
-    print(f"\nStep 1: OCR Processing All PDFs")
+    print("\nStep 1: OCR Processing All PDFs")
 
     all_json_data = []
     ocr_success = 0
@@ -120,17 +115,17 @@ async def process_directory_merged(directory_path, prompt_engineering=True, enab
 
     print(f"\nOCR Summary: {ocr_success}/{len(pdf_files)} PDFs processed")
 
-    print(f"\nStep 2: Merging JSON Data")
+    print("\nStep 2: Merging JSON Data")
 
     merged_data = merge_json_results(all_json_data)
     total_pages = sum(item['page_count'] for item in all_json_data)
 
-    print(f"Merged Results:")
+    print("Merged Results:")
     print(f"   Total pages: {total_pages}")
     print(f"   Source PDFs: {len(all_json_data)}")
     print(f"   Filtered pages: {len(merged_data['filtered_pages']['matching_pages'])}")
 
-    print(f"\nStep 3: LLM Processing on Merged Data")
+    print("\nStep 3: LLM Processing on Merged Data")
 
     try:
         chunks = chunk_pages_by_tokens(merged_data['filtered_pages']['matching_pages'], max_tokens=30000)
@@ -176,12 +171,12 @@ async def process_directory_merged(directory_path, prompt_engineering=True, enab
         if qa_result['success']:
             print(f"LLM Success: {qa_result.get('questions_processed', 0)} questions answered")
         else:
-            print(f"LLM Failed: No successful chunks")
+            print("LLM Failed: No successful chunks")
     except Exception as e:
         print(f"LLM Processing Error: {e}")
         qa_result = {'success': False, 'error': str(e), 'qa_results': {}}
 
-    print(f"\nStep 4: Generating Final Results")
+    print("\nStep 4: Generating Final Results")
 
     output_dir = Path("outputs")
     output_dir.mkdir(exist_ok=True)
@@ -196,7 +191,7 @@ async def process_directory_merged(directory_path, prompt_engineering=True, enab
     )
 
     if validation_agent and final_results.get('results_dataframe') is not None:
-        print(f"\nStep 5: Validating Results")
+        print("\nStep 5: Validating Results")
         try:
             validation_result = await validation_agent.safe_process({
                 'results_dataframe': final_results['results_dataframe']
@@ -211,7 +206,7 @@ async def process_directory_merged(directory_path, prompt_engineering=True, enab
                 final_results['validated_csv_path'] = str(val_csv_path)
                 final_results['validation_results'] = validation_result
 
-                print(f"Validation complete:")
+                print("Validation complete:")
                 print(f"   Total validated: {validation_result['total_validated']}")
                 print(f"   Passed: {validation_result['passed']}")
                 print(f"   Failed: {validation_result['failed']}")
@@ -289,7 +284,7 @@ async def generate_final_results_merged(workflow, merged_data: Dict, qa_result: 
         elif isinstance(result, (tuple, list)) and len(result) > 0:
             processed_answers = result[0] if isinstance(result[0], dict) else raw_answers
         elif isinstance(result, str):
-            print(f"WARNING: apply_deflection_defaults returned string, using raw_answers")
+            print("WARNING: apply_deflection_defaults returned string, using raw_answers")
             processed_answers = raw_answers
         else:
             print(f"WARNING: apply_deflection_defaults returned {type(result)}, using raw_answers")
@@ -300,7 +295,7 @@ async def generate_final_results_merged(workflow, merged_data: Dict, qa_result: 
         elif isinstance(result, (tuple, list)) and len(result) > 0:
             processed_answers = result[0] if isinstance(result[0], dict) else processed_answers
         elif isinstance(result, str):
-            print(f"WARNING: normalize_answers_and_units returned string, using previous")
+            print("WARNING: normalize_answers_and_units returned string, using previous")
         else:
             print(f"WARNING: normalize_answers_and_units returned {type(result)}, using previous")
 
@@ -397,7 +392,7 @@ async def generate_final_results_merged(workflow, merged_data: Dict, qa_result: 
     except Exception as e:
         print(f"FATAL WARNING: Failed to write final CSV file to {csv_path}. Reason: {e}")
 
-    print(f"Merged results saved:")
+    print("Merged results saved:")
     print(f"   CSV: {csv_path}")
     print(f"   JSON: {json_path}")
     return {'csv_path': str(csv_path), 'json_path': str(json_path),
@@ -425,7 +420,7 @@ def identify_source_pdf(page_ref: str, merged_data: Dict, section: str = None) -
 
         source_files = merged_data.get('document_info', {}).get('source_files', [])
         return source_files[0] if source_files else 'Unknown'
-    except Exception as e:
+    except Exception:
         return 'Unknown'
 
 async def main():
@@ -458,9 +453,9 @@ async def main():
             else:
                 print(f"\nValidation failed: {validation.get('error', 'Unknown error')}")
         else:
-            print(f"\nValidation: Not performed")
+            print("\nValidation: Not performed")
     else:
-        print(f"\nMerged processing failed")
+        print("\nMerged processing failed")
 
 
 if __name__ == "__main__":

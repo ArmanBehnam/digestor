@@ -2,12 +2,11 @@
 Feedback survey endpoints.
 """
 
-import uuid
 import structlog
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional, Any
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 

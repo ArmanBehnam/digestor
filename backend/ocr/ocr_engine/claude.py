@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple
 import numpy as np
 import base64
 import boto3
@@ -9,7 +9,7 @@ from PIL import Image
 
 from ocr.ocr_engine.base import BaseOCREngine
 from ocr.core.models import ExtractedElement, BoundingBox, ElementType
-from ocr.core.exceptions import OCRCredentialsError, OCRConfigurationError, OCRExtractionError, DependencyError
+from ocr.core.exceptions import OCRCredentialsError, OCRExtractionError
 
 logger = logging.getLogger(__name__)
 

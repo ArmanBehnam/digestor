@@ -1,10 +1,9 @@
 # llm/coordinate_mapper.py
 
 import re
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from rapidfuzz import fuzz
 import logging
-import unicodedata
 
 logger = logging.getLogger(__name__)
 

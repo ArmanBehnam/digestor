@@ -3,12 +3,12 @@ import sys
 import time
 from pathlib import Path
 from redis import Redis
-from rq import Worker, Queue, SimpleWorker
+from rq import SimpleWorker  # noqa: F401 - Worker, Queue used by RQ internals
 
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
-from config.config_loader import CONFIG
-import tasks
+from config.config_loader import CONFIG  # noqa: E402, F401 - triggers config loading
+import tasks  # noqa: E402, F401 - registers RQ task handlers
 
 
 def connect_to_redis(max_retries=5, retry_delay=2):
@@ -36,11 +36,11 @@ def connect_to_redis(max_retries=5, retry_delay=2):
                     retry_on_timeout=True)
 
             conn.ping()
-            print(f"Connected to Redis successfully")
+            print("Connected to Redis successfully")
             return conn
 
         except Exception as e:
-            print(f"✗ Attempt {attempt}/{max_retries} failed: {e}")
+            print(f"Attempt {attempt}/{max_retries} failed: {e}")
             if attempt < max_retries:
                 print(f"  Retrying in {retry_delay}s...")
                 time.sleep(retry_delay)

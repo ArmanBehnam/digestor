@@ -304,33 +304,33 @@ class ExtractionPatterns:
             r'(?:LLV|Long\s*leg\s*vertical)',
             r'(?:LLH|Long\s*leg\s*horizontal)'
         ]
-    
+
     def get_patterns(self, category: str = None) -> Dict[str, List[str]]:
         if category:
             return {category: self.patterns.get(category, [])}
         return self.patterns.copy()
-    
+
     def add_pattern(self, category: str, pattern: str) -> None:
         if category not in self.patterns:
             self.patterns[category] = []
         self.patterns[category].append(pattern)
-    
+
     def remove_pattern(self, category: str, pattern: str) -> bool:
         if category in self.patterns and pattern in self.patterns[category]:
             self.patterns[category].remove(pattern)
             return True
         return False
-    
+
     def validate_pattern(self, pattern: str) -> bool:
         try:
             re.compile(pattern)
             return True
         except re.error:
             return False
-    
+
     def get_categories(self) -> List[str]:
         return list(self.patterns.keys())
-    
+
     def get_pattern_count(self, category: str = None) -> int:
         if category:
             return len(self.patterns.get(category, []))

@@ -9,10 +9,9 @@ import structlog
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional, List, Any
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select, func
 from sqlalchemy.orm.attributes import flag_modified
 
 from api.dependencies import get_db, get_current_user

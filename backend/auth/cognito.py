@@ -3,13 +3,11 @@ AWS Cognito integration for authentication and user management.
 """
 
 import os
-import json
 import time
 import structlog
 import httpx
 from typing import Optional
-from jose import jwt, JWTError, jwk
-from jose.utils import base64url_decode
+from jose import jwt, JWTError
 
 logger = structlog.get_logger()
 

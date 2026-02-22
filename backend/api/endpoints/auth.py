@@ -6,7 +6,7 @@ Handles registration, login, logout, token refresh, password reset.
 import os
 import structlog
 import boto3
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 

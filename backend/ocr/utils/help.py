@@ -3,22 +3,19 @@
 import os
 import subprocess
 import shutil
-import sys
 import uuid
 import logging
 from pathlib import Path
-from typing import Union, Optional, Dict, Any, List
-import numpy as np
-import json
+from typing import Optional, Dict, Any, List
 import time
 import pdfplumber
 import tempfile
 
-from ocr.core.models import ExtractionResult, ProcessingMethod, DocumentType, ExtractedElement, SpatialTable, ImageInfo, ProcessingMetrics
+from ocr.core.models import ExtractionResult, ProcessingMethod
 from ocr.core.exceptions import PDFProcessorError, FileNotFoundError, UnsupportedFileTypeError, ProcessingError, ValidationError
 from ocr.core.interfaces import ProcessingPipeline
-from ocr.stages.base import PDFTextStage, OCRStage, TableStage, PatternStage, SpatialStage, ClassificationStage, FinalizationStage
-from ocr.config.settings import get_config, initialize_config
+from ocr.stages.base import PDFTextStage, OCRStage, PatternStage, SpatialStage, ClassificationStage, FinalizationStage
+from ocr.config.settings import initialize_config
 from ocr.ocr_engine.base import get_ocr_registry
 from ocr.processors.image import create_image_processor
 from ocr.processors.pattern import create_pattern_processor
@@ -27,7 +24,6 @@ from ocr.processors.spatial_analyzer import create_spatial_analyzer
 from ocr.processors.document_classifier import create_document_classifier
 from ocr.utils.logging_utils import setup_logging
 from ocr.exporters.unified_exporter import UnifiedExporter as JSONExporter
-from ocr.exporters.unified_exporter import create_unified_exporter as create_json_exporter
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +77,7 @@ def _dxf_to_pdf_python(dxf_path: Path, out_pdf: Path, dpi: int = 400) -> None:
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
-    ax.set_aspect("equal");
+    ax.set_aspect("equal")
     ax.axis("off")
     ctx = RenderContext(doc)
     Frontend(ctx, MatplotlibBackend(ax)).draw_layout(msp, finalize=True)

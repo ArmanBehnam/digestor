@@ -5,11 +5,7 @@ import cv2
 
 from ocr.ocr_engine.base import BaseOCREngine
 from ocr.core.models import ExtractedElement, BoundingBox, ElementType
-from ocr.core.exceptions import OCRCredentialsError, OCRConfigurationError, OCRExtractionError, DependencyError
-from azure.ai.formrecognizer import DocumentAnalysisClient
-from azure.core.credentials import AzureKeyCredential
-from azure.ai.formrecognizer import DocumentAnalysisClient
-from azure.core.credentials import AzureKeyCredential
+from ocr.core.exceptions import OCRCredentialsError, OCRExtractionError, DependencyError
 
 
 

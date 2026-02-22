@@ -5,12 +5,11 @@ Analytics endpoints - processing metrics, accuracy trends, usage stats.
 import structlog
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Query
-from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func
 
 from api.dependencies import get_db, get_current_user
-from db.models import AnalyticsEvent, DocumentProcessing, UserFeedback, ResultEdit
+from db.models import DocumentProcessing, UserFeedback, ResultEdit
 
 logger = structlog.get_logger()
 router = APIRouter()

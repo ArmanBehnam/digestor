@@ -6,14 +6,11 @@ Supports auto-project creation when project_name is provided without project_id.
 
 import os
 import uuid
-import json
 import structlog
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from api.dependencies import get_db, get_current_user
 from services.s3_service import upload_file_to_s3

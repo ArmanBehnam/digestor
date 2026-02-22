@@ -3,7 +3,6 @@ Intelligent processing router - decides between PDF.js fast path and AWS pipelin
 This is the main entry point for document processing.
 """
 
-import os
 import uuid
 import time
 import structlog

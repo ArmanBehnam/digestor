@@ -2,8 +2,7 @@
 
 import re
 import logging
-from typing import Dict, List, Any, Optional, Set, Tuple
-from collections import defaultdict
+from typing import Dict, List, Any
 
 from ocr.core.interfaces import PatternProcessor
 from ocr.core.models import DocumentType
@@ -31,13 +30,13 @@ class DocumentPatternProcessor(PatternProcessor):
             'fire_protection': ['sprinkler', 'NFPA', 'fire', 'rating', 'resistance'],
             'structural': ['beam', 'column', 'joist', 'truss', 'foundation', 'footing']
         }
-    
+
     def _compile_patterns(self) -> None:
         self._compiled_patterns = {}
-        
+
         for category, pattern_list in self.patterns.get_patterns().items():
             compiled_list = []
-            
+
             for pattern in pattern_list:
                 try:
                     compiled_pattern = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
@@ -45,10 +44,10 @@ class DocumentPatternProcessor(PatternProcessor):
                 except re.error as e:
                     logger.warning(f"Invalid regex pattern in {category}: {pattern} - {e}")
                     continue
-            
+
             if compiled_list:
                 self._compiled_patterns[category] = compiled_list
-        
+
         logger.info(f"Compiled {sum(len(patterns) for patterns in self._compiled_patterns.values())} patterns")
 
     def extract_patterns(self, text: str) -> Dict[str, List[str]]:
@@ -173,7 +172,7 @@ class DocumentPatternProcessor(PatternProcessor):
                 return ""
 
         return cleaned
-    
+
     def _extract_contextual_data(self, text: str) -> Dict[str, Any]:
         context_data = {}
 
@@ -191,12 +190,12 @@ class DocumentPatternProcessor(PatternProcessor):
             context_data.update(self._extract_fire_protection_data(text))
         elif doc_type == DocumentType.MATERIAL_SPEC:
             context_data.update(self._extract_material_data(text))
-        
+
         return context_data
-    
+
     def _detect_document_type(self, text: str) -> DocumentType:
         text_lower = text.lower()
-        
+
         type_indicators = {
             DocumentType.ARCHITECTURAL_PLAN: [
                 'floor plan', 'elevation', 'building section', 'key plan', 'ada',
@@ -227,27 +226,27 @@ class DocumentPatternProcessor(PatternProcessor):
                 'instructions', 'technical guide', 'handbook'
             ]
         }
-        
+
         scores = {}
         for doc_type, indicators in type_indicators.items():
             score = sum(1 for indicator in indicators if indicator in text_lower)
-            
+
             if doc_type == DocumentType.CONSTRUCTION_SPEC:
                 section_count = len(re.findall(r'section\s+\d+', text_lower))
                 division_count = len(re.findall(r'division\s+\d+', text_lower))
                 score += (section_count + division_count) * 5
-            
+
             if score > 0:
                 scores[doc_type] = score
-        
+
         if scores:
             return max(scores.keys(), key=lambda k: scores[k])
-        
+
         return DocumentType.GENERAL
-    
+
     def _analyze_document_characteristics(self, text: str) -> Dict[str, Any]:
         text_lower = text.lower()
-        
+
         characteristics = {
             'has_technical_drawings': bool(re.search(r'elevation|plan|section|detail|drawing', text_lower)),
             'has_specifications': bool(re.search(r'specification|astm|section \d+', text_lower)),
@@ -261,9 +260,9 @@ class DocumentPatternProcessor(PatternProcessor):
             'language_indicators': self._detect_language_patterns(text),
             'technical_density': self._calculate_technical_density(text)
         }
-        
+
         return characteristics
-    
+
     def _assess_complexity(self, text: str) -> str:
         indicators = {
             'simple': ['summary', 'general', 'basic', 'overview', 'introduction'],
@@ -271,10 +270,10 @@ class DocumentPatternProcessor(PatternProcessor):
             'complex': ['engineering', 'structural', 'technical', 'analysis', 'calculation'],
             'very_complex': ['seismic', 'load analysis', 'finite element', 'computational', 'advanced']
         }
-        
+
         text_lower = text.lower()
         scores = {}
-        
+
         for level, terms in indicators.items():
             score = sum(1 for term in terms if term in text_lower)
             if level == 'very_complex':
@@ -282,11 +281,11 @@ class DocumentPatternProcessor(PatternProcessor):
             elif level == 'complex':
                 score *= 2
             scores[level] = score
-        
+
         if scores:
             return max(scores.keys(), key=lambda k: scores[k])
         return 'moderate'
-    
+
     def _detect_language_patterns(self, text: str) -> List[str]:
         patterns = {
             'regulatory': ['shall', 'comply', 'conform', 'required', 'mandatory', 'must'],
@@ -296,37 +295,37 @@ class DocumentPatternProcessor(PatternProcessor):
             'safety': ['safety', 'hazard', 'warning', 'caution', 'protection', 'emergency'],
             'instructional': ['shall', 'should', 'must', 'required', 'ensure', 'verify']
         }
-        
+
         text_lower = text.lower()
         detected = []
-        
+
         for pattern_type, keywords in patterns.items():
             if any(keyword in text_lower for keyword in keywords):
                 detected.append(pattern_type)
-        
+
         return detected
-    
+
     def _calculate_technical_density(self, text: str) -> float:
         if not text:
             return 0.0
-        
+
         words = text.lower().split()
         total_words = len(words)
-        
+
         if total_words == 0:
             return 0.0
-        
+
         technical_count = 0
-        
+
         for category, terms in self.engineering_terms.items():
             for term in terms:
                 technical_count += sum(1 for word in words if term.lower() in word)
-        
+
         return technical_count / total_words
-    
+
     def _extract_specification_data(self, text: str) -> Dict[str, Any]:
         spec_data = {}
-        
+
         division_pattern = r'(?:DIVISION|Division)\s+(\d+)\s*[-–—]\s*([^\n\r]+)'
         divisions = re.findall(division_pattern, text, re.IGNORECASE)
         if divisions:
@@ -334,45 +333,45 @@ class DocumentPatternProcessor(PatternProcessor):
                 {'number': num.strip(), 'title': title.strip()}
                 for num, title in divisions
             ]
-        
+
         section_patterns = [
             r'(?:SECTION|Section)\s+(\d+(?:\s+\d+)*)\s*[-–—]\s*([^\n\r]+)',
             r'(\d{2}\s+\d{2}\s+\d{2})\s*[-–—]\s*([^\n\r]+)'  # CSI format
         ]
-        
+
         sections = []
         for pattern in section_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             sections.extend([(num.strip(), title.strip()) for num, title in matches])
-        
+
         if sections:
             spec_data['sections'] = [
                 {'number': num, 'title': title} for num, title in sections
             ]
-        
+
         part_pattern = r'PART\s+([123])[:\s]*([^\n\r]+)'
         parts = re.findall(part_pattern, text, re.IGNORECASE)
         if parts:
             spec_data['parts'] = [
                 {'number': num, 'title': title.strip()} for num, title in parts
             ]
-        
+
         return spec_data
-    
+
     def _extract_engineering_data(self, text: str) -> Dict[str, Any]:
         eng_data = {}
-        
+
         criteria_patterns = [
             r'(?:Design|design)\s+(?:criteria|requirements)[:\s]*([^\n]+)',
             r'(?:Performance|performance)\s+(?:criteria|requirements)[:\s]*([^\n]+)',
             r'(?:Load|LOAD)\s+(?:criteria|requirements)[:\s]*([^\n]+)',
         ]
-        
+
         criteria = []
         for pattern in criteria_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             criteria.extend(match.strip() for match in matches)
-        
+
         if criteria:
             eng_data['design_criteria'] = list(set(criteria))
 
@@ -381,17 +380,17 @@ class DocumentPatternProcessor(PatternProcessor):
             r'(?:Allowable|Ultimate)\s*(?:Stress|Strength)[:\s]*(\d+(?:\.\d+)?)\s*(?:ksi|MPa|psi)',
             r'(?:Deflection|DEFLECTION)[:\s]*(L\s*/\s*\d+)',
         ]
-        
+
         loads = []
         for pattern in load_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             loads.extend(str(match) for match in matches)
-        
+
         if loads:
             eng_data['structural_loads'] = list(set(loads))
-        
+
         return eng_data
-    
+
     def _extract_fire_protection_data(self, text: str) -> Dict[str, Any]:
         fire_data = {}
 
@@ -401,12 +400,12 @@ class DocumentPatternProcessor(PatternProcessor):
             r'UL\s*([A-Z]?\d+)',
             r'FM\s*([A-Z]?\d+)'
         ]
-        
+
         ratings = []
         for pattern in rating_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             ratings.extend(str(match) for match in matches)
-        
+
         if ratings:
             fire_data['fire_ratings'] = list(set(ratings))
 
@@ -414,9 +413,9 @@ class DocumentPatternProcessor(PatternProcessor):
         nfpa_standards = re.findall(nfpa_pattern, text, re.IGNORECASE)
         if nfpa_standards:
             fire_data['nfpa_standards'] = list(set(nfpa_standards))
-        
+
         return fire_data
-    
+
     def _extract_material_data(self, text: str) -> Dict[str, Any]:
         material_data = {}
 
@@ -430,17 +429,17 @@ class DocumentPatternProcessor(PatternProcessor):
             r'Type\s*([A-Z]?\d+[A-Z]*)',
             r'Class\s*([A-Z]?\d+[A-Z]*)'
         ]
-        
+
         grades = []
         for pattern in grade_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             grades.extend(str(match) for match in matches)
-        
+
         if grades:
             material_data['material_grades'] = list(set(grades))
-        
+
         return material_data
-    
+
     def _analyze_document_structure(self, text: str) -> Dict[str, Any]:
         structure_data = {}
 
@@ -453,27 +452,27 @@ class DocumentPatternProcessor(PatternProcessor):
         if sentences:
             avg_sentence_length = sum(len(s.split()) for s in sentences) / len(sentences)
             structure_data['avg_sentence_length'] = avg_sentence_length
-            
+
             if avg_sentence_length > 25:
                 structure_data['reading_complexity'] = 'high'
             elif avg_sentence_length > 15:
                 structure_data['reading_complexity'] = 'medium'
             else:
                 structure_data['reading_complexity'] = 'low'
-        
+
         return structure_data
-    
+
     def load_patterns(self, patterns: Dict[str, List[str]]) -> None:
         self.patterns.patterns = patterns
         self._compile_patterns()
         logger.info("Patterns reloaded and recompiled")
-    
+
     def add_pattern(self, category: str, pattern: str) -> None:
         if not self.patterns.validate_pattern(pattern):
             raise PatternExtractionError(category, pattern, "Invalid regex pattern")
-        
+
         self.patterns.add_pattern(category, pattern)
-        
+
         if category in self.patterns.get_patterns():
             compiled_list = []
             for p in self.patterns.get_patterns()[category]:
@@ -482,15 +481,15 @@ class DocumentPatternProcessor(PatternProcessor):
                     compiled_list.append(compiled_pattern)
                 except re.error:
                     continue
-            
+
             self._compiled_patterns[category] = compiled_list
-        
+
         logger.info(f"Added pattern to category {category}")
-    
+
     def get_pattern_statistics(self, text: str) -> Dict[str, Any]:
         if not text:
             return {}
-        
+
         stats = {
             'total_patterns': sum(len(patterns) for patterns in self._compiled_patterns.values()),
             'categories': len(self._compiled_patterns),
@@ -499,25 +498,25 @@ class DocumentPatternProcessor(PatternProcessor):
             'top_categories': [],
             'coverage_analysis': {}
         }
-        
+
         category_matches = {}
-        
+
         for category, patterns in self._compiled_patterns.items():
             match_count = 0
             for pattern in patterns:
                 matches = pattern.findall(text)
                 match_count += len(matches)
-            
+
             category_matches[category] = match_count
             stats['matches_by_category'][category] = match_count
-        
+
         sorted_categories = sorted(category_matches.items(), key=lambda x: x[1], reverse=True)
         stats['top_categories'] = sorted_categories[:10]
-        
+
         total_matches = sum(category_matches.values())
         stats['total_matches'] = total_matches
         stats['match_density'] = total_matches / len(text.split()) if text.split() else 0
-        
+
         return stats
 
 

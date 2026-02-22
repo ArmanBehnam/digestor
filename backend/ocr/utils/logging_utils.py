@@ -4,7 +4,6 @@ import logging
 import logging.handlers
 import sys
 from pathlib import Path
-from typing import Optional
 
 
 def setup_logging(config) -> None:

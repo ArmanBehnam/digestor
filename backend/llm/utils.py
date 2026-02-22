@@ -3,15 +3,11 @@
 import os
 import json
 import re
-import time
 import csv
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-import json
 from typing import Dict, Any, List
-import pandas as pd
-from datetime import datetime
 
 
 def apply_deflection_defaults(answers, questions, deflection_defaults_path="deflection_defaults.csv"):
@@ -30,9 +26,9 @@ def apply_deflection_defaults(answers, questions, deflection_defaults_path="defl
             break
         except FileNotFoundError:
             continue
-    
+
     if not file_found:
-        print(f"Warning: deflection_defaults.csv not found in any expected location. Skipping default application.")
+        print("Warning: deflection_defaults.csv not found in any expected location. Skipping default application.")
         return answers
 
     processed_answers = {}
@@ -49,7 +45,7 @@ def apply_deflection_defaults(answers, questions, deflection_defaults_path="defl
                 answer_text = answer_data.get('answer', 'Not Found')
                 page_info = answer_data.get('page', None)
                 confidence = answer_data.get('confidence', 0)
-            
+
             answer_not_found = (answer_text.lower() in ['not found', 'nan', '', 'error'] or answer_text.startswith('Error'))
             question_has_default = question in deflection_defaults
             if answer_not_found and question_has_default:
@@ -333,10 +329,10 @@ def load_and_combine_documents(json_files=None, data_dir="data", verbose=True):
         json_files = discover_json_files(data_dir)
         if verbose and json_files:
             print(f"Auto-discovered {len(json_files)} JSON files in {data_dir}")
-    
+
     if not json_files:
         if verbose:
-            print(f"No JSON files found")
+            print("No JSON files found")
         return [], [], {'filtered_pages_only': []}
     combined_pages = []
     document_info = []
@@ -345,7 +341,7 @@ def load_and_combine_documents(json_files=None, data_dir="data", verbose=True):
     for json_file in json_files:
         if verbose:
             print(f"Loading: {os.path.basename(json_file)}")
-        
+
         try:
             with open(json_file, 'r', encoding='utf-8') as f:
                 ocr_result = json.load(f)
@@ -358,7 +354,7 @@ def load_and_combine_documents(json_files=None, data_dir="data", verbose=True):
                     print(f"  Unknown OCR format in {json_file}")
                 continue
             start_page = len(combined_pages)
-            
+
             for page_idx, page_data in enumerate(doc_pages):
                 combined_pages.append(page_data)
                 document_info.append({'original_file': json_file,
@@ -391,7 +387,7 @@ def map_page_to_source(page_info, relevant_page_indices, document_info):
             match = re.search(r'\d+', str(page_info))
             if match:
                 page_num = int(match.group())
-        
+
         if page_num is not None:
             try:
                 if 0 <= page_num < len(relevant_page_indices):
@@ -401,13 +397,13 @@ def map_page_to_source(page_info, relevant_page_indices, document_info):
                         source_doc = doc_info['doc_name']
                         original_page = f"{doc_info['original_page']} (from {source_doc})"
                         return source_doc, original_page
-                
+
                 if 0 <= page_num < len(document_info):
                     doc_info = document_info[page_num]
                     source_doc = doc_info['doc_name']
                     original_page = f"{doc_info['original_page']} (from {source_doc})"
                     return source_doc, original_page
-                
+
                 for i, rel_page_idx in enumerate(relevant_page_indices):
                     if 0 <= rel_page_idx < len(document_info):
                         doc_info = document_info[rel_page_idx]
@@ -415,8 +411,8 @@ def map_page_to_source(page_info, relevant_page_indices, document_info):
                             source_doc = doc_info['doc_name']
                             original_page = f"{doc_info['original_page']} (from {source_doc})"
                             return source_doc, original_page
-                            
-            except (ValueError, IndexError, TypeError) as e:
+
+            except (ValueError, IndexError, TypeError):
                 pass
     if relevant_page_indices and len(relevant_page_indices) > 0:
         try:
@@ -455,10 +451,10 @@ def export_results_summary(results, output_folder=None, filename_prefix="pipelin
             if doc != "Unknown" and doc != "Error":
                 doc_counts[doc] = doc_counts.get(doc, 0) + 1
         if doc_counts:
-            print(f" Answers by document:")
+            print(" Answers by document:")
             for doc, count in doc_counts.items():
                 print(f"      • {doc}: {count} answers")
-    print(f"\nKEY SUCCESSFUL ANSWERS:")
+    print("\nKEY SUCCESSFUL ANSWERS:")
     for result in successful_results[:10]:  # Show first 10
         print(f"   Q{result['question_number']}: {result['answer'][:70]}... ({result['confidence']}%)")
 
@@ -466,7 +462,7 @@ def export_results_summary(results, output_folder=None, filename_prefix="pipelin
         output_folder = "."
         if results and results[0].get('source_document') != 'Error':
             output_folder = "data"
-    
+
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     if project_name:
         output_filename = f"{filename_prefix}_{project_name}_{timestamp}.csv"
@@ -476,7 +472,7 @@ def export_results_summary(results, output_folder=None, filename_prefix="pipelin
     os.makedirs(output_folder, exist_ok=True)
     df.to_csv(output_path, index=False, encoding='utf-8')
     file_size = os.path.getsize(output_path)
-    print(f"\nEXPORT COMPLETE:")
+    print("\nEXPORT COMPLETE:")
     print(f"   File: {output_path}")
     print(f"   Rows: {len(df)}")
     print(f"   Size: {file_size:,} bytes")
@@ -488,7 +484,7 @@ def get_efficiency_metrics(results, combined_pages):
     total_pages_searched = sum(r.get('pages_searched', 0) for r in results)
     avg_pages_per_question = total_pages_searched / len(results) if results else 0
     successful_results = [r for r in results if r['answer'] != 'Not Found' and not r['answer'].startswith('Error')]
-    
+
     return {'total_questions': len(results), 'successful_answers': len(successful_results),
         'success_rate': len(successful_results) / len(results) * 100 if results else 0,
         'avg_confidence': sum(r['confidence'] for r in successful_results) / len(successful_results) if successful_results else 0,
@@ -594,7 +590,7 @@ def export_results_with_coordinates(results: List[Dict], output_folder: str, fil
     df.to_csv(csv_path, index=False)
     create_coordinate_json_output(results, json_path)
     coord_count = sum(1 for r in results if r.get('has_coordinates'))
-    print(f"Coordinate tracking results:")
+    print("Coordinate tracking results:")
     print(f"  Total answers: {len(results)}")
     print(f"  With coordinates: {coord_count}")
     print(f"  Success rate: {coord_count / len(results) * 100:.1f}%")
