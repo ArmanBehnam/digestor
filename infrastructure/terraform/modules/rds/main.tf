@@ -39,9 +39,9 @@ resource "aws_db_instance" "main" {
   engine_version = "15.4"
   instance_class = local.instance_class
 
-  db_name  = local.db_name
-  username = "digestor"
-  password = "CHANGE_ME_IN_SECRETS_MANAGER"  # Override via Secrets Manager
+  db_name                     = local.db_name
+  username                    = "digestor"
+  manage_master_user_password = true  # AWS manages password via Secrets Manager
 
   allocated_storage     = local.is_prod ? 50 : 20
   max_allocated_storage = local.is_prod ? 200 : 50
@@ -74,7 +74,7 @@ resource "aws_db_proxy" "main" {
   auth {
     auth_scheme = "SECRETS"
     iam_auth    = "DISABLED"
-    secret_arn  = aws_secretsmanager_secret.db_credentials.arn
+    secret_arn  = aws_db_instance.main.master_user_secret[0].secret_arn
   }
 }
 
@@ -92,10 +92,6 @@ resource "aws_db_proxy_target" "main" {
   db_proxy_name          = aws_db_proxy.main.name
   target_group_name      = aws_db_proxy_default_target_group.main.name
   db_instance_identifier = aws_db_instance.main.identifier
-}
-
-resource "aws_secretsmanager_secret" "db_credentials" {
-  name = "digestor/${var.environment}/db-credentials"
 }
 
 resource "aws_iam_role" "rds_proxy" {
@@ -118,9 +114,9 @@ resource "aws_iam_role_policy" "rds_proxy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
-      Action = ["secretsmanager:GetSecretValue"]
-      Resource = [aws_secretsmanager_secret.db_credentials.arn]
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue"]
+      Resource = [aws_db_instance.main.master_user_secret[0].secret_arn]
     }]
   })
 }
@@ -131,4 +127,8 @@ output "endpoint" {
 
 output "db_name" {
   value = local.db_name
+}
+
+output "master_user_secret_arn" {
+  value = aws_db_instance.main.master_user_secret[0].secret_arn
 }

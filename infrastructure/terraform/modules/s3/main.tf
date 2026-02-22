@@ -68,7 +68,13 @@ resource "aws_s3_bucket_cors_configuration" "main" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "PUT", "POST"]
-    allowed_origins = ["*"]
+    allowed_origins = var.environment == "prod" ? [
+      "https://digestor.yourdomain.com"
+    ] : [
+      "http://localhost:5173",
+      "http://localhost:8080",
+      "https://*.us-east-1.elb.amazonaws.com"
+    ]
     max_age_seconds = 3600
   }
 }

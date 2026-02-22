@@ -13,7 +13,7 @@ def _load_secrets_from_aws():
     Fetch secrets from AWS Secrets Manager.
     Returns a dict of secret key-value pairs, or empty dict on failure.
     """
-    secret_name = os.getenv('SECRETS_MANAGER_SECRET_NAME', 'digetor/production/secrets')
+    secret_name = os.getenv('SECRETS_MANAGER_SECRET_NAME', 'digestor/production/secrets')
     region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
 
     try:
@@ -65,7 +65,7 @@ def load_config():
             'AWS_ACCESS_KEY_ID':     ('AWS_ACCESS_KEY_ID',     'AWS_ACCESS_KEY_ID'),
             'AWS_SECRET_ACCESS_KEY': ('AWS_SECRET_ACCESS_KEY', 'AWS_SECRET_ACCESS_KEY'),
             'AWS_DEFAULT_REGION':    ('AWS_DEFAULT_REGION',    'AWS_DEFAULT_REGION'),
-            'S3_BUCKET_NAME':        ('S3_BUCKET_NAME',        'S3_BUCKET_NAME'),
+            'S3_BUCKET':        ('S3_BUCKET',        'S3_BUCKET'),
             'REDIS_URL':             ('REDIS_URL',             'REDIS_URL'),
             'openai_api_key':        ('OPENAI_API_KEY',        'OPENAI_API_KEY'),
             'anthropic_api_key':     ('ANTHROPIC_API_KEY',     'ANTHROPIC_API_KEY'),
@@ -98,7 +98,7 @@ def load_config():
             'AWS_DEFAULT_REGION':    config.get('AWS_DEFAULT_REGION', 'us-east-1'),
             'AZURE_ENDPOINT':        config.get('AZURE_ENDPOINT', ''),
             'AZURE_API_KEY':         config.get('AZURE_API_KEY', ''),
-            'S3_BUCKET_NAME':        config.get('S3_BUCKET_NAME', ''),
+            'S3_BUCKET':        config.get('S3_BUCKET', ''),
         }
 
         for key, value in env_push.items():

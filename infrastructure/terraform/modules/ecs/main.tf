@@ -8,6 +8,10 @@ variable "redis_endpoint" { type = string }
 variable "cognito_pool_id" { type = string }
 variable "cognito_client_id" { type = string }
 variable "s3_bucket" { type = string }
+variable "rds_secret_arn" {
+  type        = string
+  description = "ARN of the RDS master user secret in Secrets Manager"
+}
 
 locals {
   is_prod    = var.environment == "prod"
@@ -136,7 +140,9 @@ resource "aws_ecs_task_definition" "web" {
     environment = [
       { name = "PROCESS_TYPE", value = "web" },
       { name = "ENVIRONMENT", value = var.environment },
-      { name = "DATABASE_URL", value = "postgresql+asyncpg://digestor:CHANGE_ME@${var.rds_endpoint}:5432/digestor_${var.environment}" },
+      { name = "RDS_ENDPOINT", value = var.rds_endpoint },
+      { name = "RDS_DB_NAME", value = "digestor_${var.environment}" },
+      { name = "RDS_SECRET_ARN", value = var.rds_secret_arn },
       { name = "REDIS_URL", value = "redis://${var.redis_endpoint}:6379" },
       { name = "S3_BUCKET", value = var.s3_bucket },
       { name = "COGNITO_USER_POOL_ID", value = var.cognito_pool_id },
@@ -170,7 +176,9 @@ resource "aws_ecs_task_definition" "worker" {
     environment = [
       { name = "PROCESS_TYPE", value = "worker" },
       { name = "ENVIRONMENT", value = var.environment },
-      { name = "DATABASE_URL", value = "postgresql+asyncpg://digestor:CHANGE_ME@${var.rds_endpoint}:5432/digestor_${var.environment}" },
+      { name = "RDS_ENDPOINT", value = var.rds_endpoint },
+      { name = "RDS_DB_NAME", value = "digestor_${var.environment}" },
+      { name = "RDS_SECRET_ARN", value = var.rds_secret_arn },
       { name = "REDIS_URL", value = "redis://${var.redis_endpoint}:6379" },
       { name = "S3_BUCKET", value = var.s3_bucket },
       { name = "USE_SECRETS_MANAGER", value = "true" },
@@ -220,4 +228,18 @@ resource "aws_ecs_service" "worker" {
     security_groups  = [aws_security_group.ecs.id]
     assign_public_ip = false
   }
+}
+
+# --- Outputs ---
+
+output "cluster_name" {
+  value = aws_ecs_cluster.main.name
+}
+
+output "web_service_name" {
+  value = aws_ecs_service.web.name
+}
+
+output "worker_service_name" {
+  value = aws_ecs_service.worker.name
 }

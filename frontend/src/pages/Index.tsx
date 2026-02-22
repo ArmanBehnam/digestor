@@ -184,22 +184,19 @@ const extractUnit = (answer: string, questionId: number): string => {
   return "";
 };
 
-// Compute project hash from project name and files
-const computeProjectHash = (projectName: string, files: File[]): string => {
+// Compute project hash from project name and files using SHA-256
+const computeProjectHash = async (projectName: string, files: File[]): Promise<string> => {
   const fileMetadata = files
     .map((f) => `${f.name}:${f.size}`)
     .sort()
     .join("|");
   const combined = `${projectName.trim().toLowerCase()}|${fileMetadata}`;
 
-  // Simple hash function
-  let hash = 0;
-  for (let i = 0; i < combined.length; i++) {
-    const char = combined.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(36);
+  const encoder = new TextEncoder();
+  const data = encoder.encode(combined);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.slice(0, 8).map(b => b.toString(16).padStart(2, "0")).join("");
 };
 
 const Index = () => {
@@ -753,7 +750,7 @@ const Index = () => {
 
       // Check if project already exists via API
       if (finalProjectName) {
-        const hash = computeProjectHash(finalProjectName, files);
+        const hash = await computeProjectHash(finalProjectName, files);
         setProjectHash(hash);
 
         try {
@@ -800,7 +797,7 @@ const Index = () => {
       const fileResults: AnalysisResult[][] = [];
       // Generate a stable project name ONCE for all files (prevents separate projects)
       const stableProjectName = finalProjectName || `Project_${Date.now()}`;
-      const hash = computeProjectHash(stableProjectName, files);
+      const hash = await computeProjectHash(stableProjectName, files);
       setProjectHash(hash);
 
       // ============================================================

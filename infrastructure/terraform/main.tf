@@ -92,12 +92,28 @@ module "ecs" {
   cognito_pool_id    = module.cognito.user_pool_id
   cognito_client_id  = module.cognito.client_id
   s3_bucket          = module.s3.bucket_name
+  rds_secret_arn     = module.rds.master_user_secret_arn
+}
+
+module "monitoring" {
+  source                  = "./modules/monitoring"
+  environment             = var.environment
+  ecs_cluster_name        = module.ecs.cluster_name
+  web_service_name        = module.ecs.web_service_name
+  worker_service_name     = module.ecs.worker_service_name
+  alb_arn_suffix          = module.alb.arn_suffix
+  target_group_arn_suffix = module.alb.target_group_arn_suffix
+  alb_arn                 = module.alb.arn
 }
 
 # --- Outputs ---
 
 output "alb_dns" {
   value = module.alb.dns_name
+}
+
+output "waf_web_acl_arn" {
+  value = module.monitoring.waf_web_acl_arn
 }
 
 output "ecr_repository_url" {

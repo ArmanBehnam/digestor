@@ -23,7 +23,9 @@ def main():
             capture_output=True, text=True,
         )
         if result.returncode != 0:
-            print(f"[ENTRYPOINT] Migration warning: {result.stderr}")
+            print(f"[ENTRYPOINT] Migration FAILED: {result.stderr}")
+            print("[ENTRYPOINT] Aborting startup — database schema may be out of date.")
+            sys.exit(1)
         else:
             print("[ENTRYPOINT] Migrations complete")
 

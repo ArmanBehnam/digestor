@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: digetor
+  ECR_REPOSITORY: digestor-unified-dev
   ECS_CLUSTER: digestor-dev
   WEB_SERVICE: digestor-web-dev
   WORKER_SERVICE: digestor-worker-dev
@@ -113,12 +113,24 @@ jobs:
       # --- Health check ---
       - name: Verify deployment
         run: |
-          ALB_DNS="digestor-dev-1792703510.us-east-1.elb.amazonaws.com"
+          # Dynamically fetch ALB DNS from ECS/ALB instead of hardcoding
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --names "digestor-dev" \
+            --query "LoadBalancers[0].DNSName" \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+
+          if [ -z "$ALB_DNS" ] || [ "$ALB_DNS" = "None" ]; then
+            echo "ERROR: Could not resolve ALB DNS name"
+            exit 1
+          fi
+
+          echo "ALB DNS: $ALB_DNS"
           echo "Waiting 30s for services to stabilize..."
           sleep 30
 
           echo "Checking health endpoint..."
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$ALB_DNS/api/health)
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$ALB_DNS/api/health" --max-time 15)
 
           if [ "$HTTP_STATUS" = "200" ]; then
             echo "Health check passed (HTTP $HTTP_STATUS)"

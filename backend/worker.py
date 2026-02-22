@@ -52,7 +52,7 @@ def run_worker():
     """Entry point called by entrypoint.py when PROCESS_TYPE=worker."""
     print("Starting RQ worker")
     print(f"AWS Region: {os.getenv('AWS_DEFAULT_REGION')}")
-    print(f"S3 Bucket: {os.getenv('S3_BUCKET_NAME', os.getenv('S3_BUCKET'))}")
+    print(f"S3 Bucket: {os.getenv('S3_BUCKET')}")
 
     conn = connect_to_redis()
     worker = SimpleWorker(['default'], connection=conn)
