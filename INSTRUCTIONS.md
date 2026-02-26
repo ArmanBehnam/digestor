@@ -5,18 +5,46 @@
 | Item | Value |
 |------|-------|
 | **App URL** | **https://r2jmucqgrt.us-east-1.awsapprunner.com** |
+| **Version** | **2.0.0** |
 | Hosting | AWS App Runner (service: `digetor-web`) |
 | ECR Image | `800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor` |
+| Health Check | `GET /api/health` (returns DB + Redis status) |
+| Source Repo | `https://cdesplx.visualstudio.com/_git/Digestor` (branch: `Arman`) |
+
+### Features
+
+- **Sign-in page** with AWS Cognito authentication (login, signup, password reset)
+- **PDF upload** with drag-and-drop (multi-file support)
+- **Dual-path processing**: PDF.js browser extraction (~20s) with auto-fallback to AWS Textract OCR (~3-5 min)
+- **25 engineering questions** extracted across 6 categories (Building Code, Deflection, Wind, Gravity, Snow, Seismic)
+- **Role-based access**: Admin, Supervisor, Engineer
+- **Supervisor review workflow** with approval/rejection
+- **Inline editing** with audit trail, feedback, and project notes
+- **Admin panel** for user management and role assignment
+
+### Processing Pipeline
+
+```
+Upload PDF → PDF.js (browser text extraction)
+           → LLM analysis (OpenAI → Anthropic → DeepSeek fallback chain)
+           → Quality check (FallbackDetector)
+              → PASS: Results returned (~20s, 99%+ confidence)
+              → FAIL: Auto-escalate to AWS Textract deep OCR pipeline (~3-5 min)
+```
 
 ## Test Users (Cognito)
 
 | Email | Role | Password |
 |-------|------|----------|
-| `admin@digestor-test.com` | Admin | *(set during first login)* |
-| `supervisor@digestor-test.com` | Supervisor | *(set during first login)* |
-| `engineer@digestor-test.com` | Engineer | *(set during first login)* |
+| `admin@digestor-test.com` | Admin | `Admin2026!` |
+| `supervisor@digestor-test.com` | Supervisor | *(reset via Cognito Console)* |
+| `engineer@digestor-test.com` | Engineer | *(reset via Cognito Console)* |
 
-> If you forgot the password, reset it via AWS Cognito Console:
+> To reset a password via CLI:
+> ```bash
+> aws cognito-idp admin-set-user-password --user-pool-id us-east-1_DGMrbW6Vw --username "EMAIL" --password "NEW_PASSWORD" --permanent
+> ```
+> Or via AWS Cognito Console:
 > https://us-east-1.console.aws.amazon.com/cognito/v2/idp/user-pools/us-east-1_DGMrbW6Vw/user-management/users
 
 ---
@@ -58,18 +86,13 @@ COGNITO_APP_CLIENT_ID=6k00q57poml1uooj9aal7tga8c
 
 | Item | Value |
 |------|-------|
-| Dev bucket | `digestor-dev-storage` |
-| Prod bucket | `digestor-unified-storage` |
+| **Active bucket** | **`herokubucketclark-ocr-4681`** |
 | Encryption | AES-256 (server-side) |
 | Public access | Blocked (all 4 settings) |
 
-**Lifecycle rules:**
-- `temp/*` files deleted after 1 day
-- `uploads/*` files deleted after 7 days
-
 **Env var:**
 ```
-S3_BUCKET=digestor-dev-storage
+S3_BUCKET=herokubucketclark-ocr-4681
 ```
 
 ---
@@ -79,24 +102,15 @@ S3_BUCKET=digestor-dev-storage
 | Item | Value |
 |------|-------|
 | Engine | PostgreSQL 15.4 |
-| Instance ID | `digestor-dev` (dev), `digestor-prod` (prod) |
-| DB name | `digestor_dev` (dev), `digestor_prod` (prod) |
+| Instance ID | `digestor-dev` |
+| Endpoint | `digestor-dev.cqn6ues4ojqb.us-east-1.rds.amazonaws.com` |
+| DB name | `digestor_dev` |
 | Username | `digestor` |
-| Password | Managed by AWS Secrets Manager (`manage_master_user_password = true`) |
-| Instance class | `db.t3.micro` (dev), `db.t3.small` (prod) |
-| RDS Proxy | `digestor-dev` (endpoint used for connections) |
+| Instance class | `db.t3.micro` |
 
-**Password retrieval:**
-The DB password is auto-managed by AWS. The application resolves it at startup via:
+**Connection (App Runner):**
 ```
-RDS_SECRET_ARN=<auto-populated by Terraform>
-RDS_ENDPOINT=<RDS Proxy endpoint>
-RDS_DB_NAME=digestor_dev
-```
-
-Or via direct `DATABASE_URL` from CI/CD:
-```
-DATABASE_URL=postgresql+asyncpg://digestor:<password>@<rds-proxy-endpoint>:5432/digestor_dev
+DATABASE_URL=postgresql+asyncpg://digestor:<password>@digestor-dev.cqn6ues4ojqb.us-east-1.rds.amazonaws.com:5432/digestor_dev
 ```
 
 **Local dev default:**
@@ -111,12 +125,12 @@ DATABASE_URL=postgresql+asyncpg://digestor:digestor_dev_password@localhost:5432/
 | Item | Value |
 |------|-------|
 | Engine | Redis 7.x |
-| Dev endpoint | Set in `dev.tfvars` (fill in after provisioning) |
+| Dev endpoint | `digetor-redis.uluqxv.0001.use1.cache.amazonaws.com` |
 
 **Env var:**
 ```
-REDIS_URL=redis://localhost:6379           # local dev
-REDIS_URL=redis://<endpoint>:6379          # production
+REDIS_URL=redis://localhost:6379                                              # local dev
+REDIS_URL=redis://digetor-redis.uluqxv.0001.use1.cache.amazonaws.com:6379    # production
 ```
 
 ---
@@ -182,8 +196,41 @@ docker push 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest
 |------|-------|
 | Service name | `digetor-web` |
 | Service URL | `https://r2jmucqgrt.us-east-1.awsapprunner.com` |
-| Source | ECR image `800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor` |
+| Source | ECR image `800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest` |
+| Instance Role | `arn:aws:iam::800712212732:role/digetor-apprunner-role` |
+| ECR Access Role | `arn:aws:iam::800712212732:role/digetor-apprunner-ecr-role` |
+| VPC Connector | `digetor-vpc-connector` (for RDS + Redis access) |
+| Health Check | `GET /api/health` (interval 20s, 1 healthy / 5 unhealthy) |
+| CPU / Memory | 1024 (1 vCPU) / 2048 MB |
 | Console | `https://us-east-1.console.aws.amazon.com/apprunner/home?region=us-east-1#/services` |
+| Logs | App Runner Console → `digetor-web` → Logs tab |
+
+**App Runner Environment Variables:**
+```
+PROCESS_TYPE=web
+ENVIRONMENT=production
+DATABASE_URL=postgresql+asyncpg://digestor:<password>@digestor-dev.cqn6ues4ojqb.us-east-1.rds.amazonaws.com:5432/digestor_dev
+REDIS_URL=redis://digetor-redis.uluqxv.0001.use1.cache.amazonaws.com:6379
+S3_BUCKET=herokubucketclark-ocr-4681
+COGNITO_USER_POOL_ID=us-east-1_DGMrbW6Vw
+COGNITO_APP_CLIENT_ID=6k00q57poml1uooj9aal7tga8c
+USE_SECRETS_MANAGER=true
+SECRETS_MANAGER_SECRET_NAME=digetor/production/secrets
+ALLOWED_ORIGINS=https://r2jmucqgrt.us-east-1.awsapprunner.com
+LOG_LEVEL=INFO
+```
+
+**Deploy update:**
+```bash
+# Build and push image
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 800712212732.dkr.ecr.us-east-1.amazonaws.com
+docker build -t digetor -f infrastructure/docker/Dockerfile .
+docker tag digetor:latest 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest
+docker push 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest
+
+# Trigger App Runner redeployment
+aws apprunner start-deployment --service-arn arn:aws:apprunner:us-east-1:800712212732:service/digetor-web/a8a674c668a54cb3bf9ce88f2879e18e --region us-east-1
+```
 
 ---
 
@@ -247,17 +294,19 @@ arn:aws:acm:us-east-1:800712212732:certificate/<FILL_IN>
 
 | Secret | Path | Purpose |
 |--------|------|---------|
-| DB credentials | Auto-managed by RDS `manage_master_user_password` | RDS Proxy auth + app DB connection |
-| App secrets | `digestor/production/secrets` | API keys (OpenAI, Azure, etc.) |
+| App secrets | `digetor/production/secrets` | API keys, AWS creds, Redis URL |
 
-**Keys stored in `digestor/production/secrets`:**
+**Keys stored in `digetor/production/secrets`:**
 ```json
 {
+  "AWS_ACCESS_KEY_ID": "...",
+  "AWS_SECRET_ACCESS_KEY": "...",
   "OPENAI_API_KEY": "sk-...",
-  "ANTHROPIC_API_KEY": "sk-ant-...",
-  "DEEPSEEK_API_KEY": "sk-...",
-  "AZURE_ENDPOINT": "https://...",
-  "AZURE_API_KEY": "..."
+  "AZURE_ENDPOINT": "https://ocr-document-cde.cognitiveservices.azure.com/",
+  "AZURE_API_KEY": "...",
+  "S3_BUCKET_NAME": "herokubucketclark-ocr-4681",
+  "AWS_DEFAULT_REGION": "us-east-1",
+  "REDIS_URL": "redis://digetor-redis.uluqxv.0001.use1.cache.amazonaws.com:6379"
 }
 ```
 
@@ -383,14 +432,15 @@ waf_web_acl_arn      -> WAF Web ACL ARN
 
 | Service | URL |
 |---------|-----|
+| **Live App** | `https://r2jmucqgrt.us-east-1.awsapprunner.com` |
+| **App Runner Console** | `https://us-east-1.console.aws.amazon.com/apprunner/home?region=us-east-1#/services` |
+| **App Runner Logs** | App Runner Console → `digetor-web` → Logs tab |
 | Cognito User Pool | `https://us-east-1.console.aws.amazon.com/cognito/v2/idp/user-pools/us-east-1_DGMrbW6Vw/users` |
-| ECS Cluster | `https://us-east-1.console.aws.amazon.com/ecs/v2/clusters/digestor-dev` |
-| ECR Repository | `https://us-east-1.console.aws.amazon.com/ecr/repositories/private/800712212732/digestor-unified-dev` |
-| S3 Bucket | `https://s3.console.aws.amazon.com/s3/buckets/digestor-dev-storage` |
-| CloudWatch Logs | `https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Fecs$252Fdigestor-dev` |
+| ECR Repository | `https://us-east-1.console.aws.amazon.com/ecr/repositories/private/800712212732/digetor` |
+| S3 Bucket | `https://s3.console.aws.amazon.com/s3/buckets/herokubucketclark-ocr-4681` |
 | RDS Instance | `https://us-east-1.console.aws.amazon.com/rds/home?region=us-east-1#database:id=digestor-dev` |
-| WAF Console | `https://us-east-1.console.aws.amazon.com/wafv2/homev2/web-acls` |
 | Secrets Manager | `https://us-east-1.console.aws.amazon.com/secretsmanager/listsecrets?region=us-east-1` |
+| Source Code | `https://cdesplx.visualstudio.com/_git/Digestor?version=GBArman` |
 
 ---
 
@@ -408,7 +458,7 @@ waf_web_acl_arn      -> WAF Web ACL ARN
 | `RDS_DB_NAME` | DB connection (Terraform path) | `digestor_dev` |
 | `RDS_SECRET_ARN` | DB password from Secrets Manager | `arn:aws:secretsmanager:...` |
 | `REDIS_URL` | Redis/RQ connection | `redis://localhost:6379` |
-| `S3_BUCKET` | S3 uploads | `digestor-dev-storage` |
+| `S3_BUCKET` | S3 uploads | `herokubucketclark-ocr-4681` |
 | `COGNITO_USER_POOL_ID` | JWT verification | `us-east-1_DGMrbW6Vw` |
 | `COGNITO_APP_CLIENT_ID` | Cognito auth flows | `6k00q57poml1uooj9aal7tga8c` |
 | `OPENAI_API_KEY` | Primary LLM | `sk-...` |
