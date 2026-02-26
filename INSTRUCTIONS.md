@@ -430,17 +430,32 @@ waf_web_acl_arn      -> WAF Web ACL ARN
 
 ## Key URLs & Console Links
 
+### Application
+
 | Service | URL |
 |---------|-----|
-| **Live App** | `https://r2jmucqgrt.us-east-1.awsapprunner.com` |
-| **App Runner Console** | `https://us-east-1.console.aws.amazon.com/apprunner/home?region=us-east-1#/services` |
-| **App Runner Logs** | App Runner Console → `digetor-web` → Logs tab |
-| Cognito User Pool | `https://us-east-1.console.aws.amazon.com/cognito/v2/idp/user-pools/us-east-1_DGMrbW6Vw/users` |
-| ECR Repository | `https://us-east-1.console.aws.amazon.com/ecr/repositories/private/800712212732/digetor` |
-| S3 Bucket | `https://s3.console.aws.amazon.com/s3/buckets/herokubucketclark-ocr-4681` |
-| RDS Instance | `https://us-east-1.console.aws.amazon.com/rds/home?region=us-east-1#database:id=digestor-dev` |
-| Secrets Manager | `https://us-east-1.console.aws.amazon.com/secretsmanager/listsecrets?region=us-east-1` |
-| Source Code | `https://cdesplx.visualstudio.com/_git/Digestor?version=GBArman` |
+| **Live App** | https://r2jmucqgrt.us-east-1.awsapprunner.com |
+| **Source Code** | https://cdesplx.visualstudio.com/_git/Digestor?version=GBArman |
+
+### AWS Console Links (Account: 800712212732, Region: us-east-1)
+
+| Service | Console URL | Resource |
+|---------|-------------|----------|
+| **Cognito** (Auth) | https://us-east-1.console.aws.amazon.com/cognito/v2/idp/user-pools/us-east-1_DGMrbW6Vw/users | User Pool: `digestor-dev` |
+| **App Runner** (Hosting) | https://us-east-1.console.aws.amazon.com/apprunner/home?region=us-east-1#/services | Service: `digetor-web` |
+| **App Runner Logs** | https://us-east-1.console.aws.amazon.com/apprunner/home?region=us-east-1#/services → `digetor-web` → Logs | Application + Service logs |
+| **ECS** (Containers) | https://us-east-1.console.aws.amazon.com/ecs/v2/clusters?region=us-east-1 | Clusters: `digestor-dev`, `digetor-cluster` |
+| **IAM** (Roles) | https://us-east-1.console.aws.amazon.com/iam/home#/roles | Roles: `digetor-apprunner-role`, `digetor-ecs-task-role`, `digetor-codebuild-role` |
+| **CloudWatch** (Logs) | https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups | Log groups: `/aws/apprunner/digetor-web/...`, `/ecs/digestor-dev` |
+| **CloudWatch** (Dashboard) | https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=digestor-dev | Alarms + metrics |
+| **S3** (Storage) | https://s3.console.aws.amazon.com/s3/buckets/herokubucketclark-ocr-4681?region=us-east-1 | Bucket: `herokubucketclark-ocr-4681` |
+| **CodeBuild** (CI) | https://us-east-1.console.aws.amazon.com/codesuite/codebuild/projects/digetor-build/history?region=us-east-1 | Project: `digetor-build` |
+| **ElastiCache** (Redis) | https://us-east-1.console.aws.amazon.com/elasticache/home?region=us-east-1#/redis | Cluster: `digetor-redis` |
+| **Bedrock AgentCore** | https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/overview | Models: Claude, GPT via API keys |
+| **Secrets Manager** | https://us-east-1.console.aws.amazon.com/secretsmanager/secret?name=digetor%2Fproduction%2Fsecrets&region=us-east-1 | Secret: `digetor/production/secrets` |
+| **ECR** (Images) | https://us-east-1.console.aws.amazon.com/ecr/repositories/private/800712212732/digetor?region=us-east-1 | Repository: `digetor` |
+| **Step Functions** (Workflows) | https://us-east-1.console.aws.amazon.com/states/home?region=us-east-1#/statemachines | Machines: `digestor-processing`, `ocr-multi-agent-pipeline` |
+| **RDS** (Database) | https://us-east-1.console.aws.amazon.com/rds/home?region=us-east-1#database:id=digestor-dev | Instance: `digestor-dev` |
 
 ---
 
