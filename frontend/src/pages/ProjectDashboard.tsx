@@ -120,11 +120,8 @@ const ProjectDashboard = () => {
       // Handle the response - the API may return paginated data or an array
       const rawProjects = Array.isArray(projectsData) ? projectsData : (projectsData.items || projectsData.data || []);
 
-      // Filter to only relevant statuses
-      const relevantStatuses = ["PENDING", "PENDING_APPROVAL", "CHANGES_REQUESTED", "APPROVED"];
-      const filteredProjects = rawProjects.filter((p: any) =>
-        relevantStatuses.includes(p.approval_status)
-      );
+      // Show all projects (including processing, submitted, approved, etc.)
+      const filteredProjects = rawProjects;
 
       // Deduplicate by project_hash (keep first/most recent)
       const projectMap = new Map<string, ProjectRow>();

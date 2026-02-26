@@ -997,6 +997,10 @@ const Index = () => {
 
       setResults(finalResults || []);
       setProjectName(stableProjectName);
+      if (serverProjectId) {
+        setProjectId(serverProjectId);
+        setProjectHash(serverProjectId); // Use UUID as hash so submit works
+      }
       setProgress(100);
       setStage("complete");
 
