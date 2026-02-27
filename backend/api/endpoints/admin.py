@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from api.dependencies import get_db, get_current_user
-from db.models import User, UserFeedback
+from db.models import User, UserFeedback, FeedbackSurvey
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -50,6 +50,7 @@ async def list_users(
             "email": u.email,
             "full_name": u.full_name,
             "role": u.role,
+            "roles": [u.role] if u.role else [],
             "organization": u.organization,
             "is_active": u.is_active,
             "created_at": u.created_at.isoformat() if u.created_at else None,
@@ -161,29 +162,47 @@ async def list_all_feedback(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all feedback entries (admin only)."""
+    """List all feedback survey entries (admin only)."""
     user_groups = current_user.get("cognito:groups", [])
     if not any(g in user_groups for g in ("admin", "supervisor")):
         raise HTTPException(status_code=403, detail="Admin or supervisor role required")
 
-    stmt = select(UserFeedback).order_by(UserFeedback.created_at.desc()).limit(500)
+    stmt = select(FeedbackSurvey).order_by(FeedbackSurvey.created_at.desc()).limit(500)
     if status:
-        stmt = stmt.where(UserFeedback.feedback_type == status)
+        stmt = stmt.where(FeedbackSurvey.status == status)
 
     result = await db.execute(stmt)
-    feedbacks = result.scalars().all()
+    surveys = result.scalars().all()
 
+    # Build user lookup for email/name
+    user_ids = {s.user_id for s in surveys}
+    user_lookup = {}
+    if user_ids:
+        user_result = await db.execute(select(User).where(User.id.in_(user_ids)))
+        for u in user_result.scalars().all():
+            user_lookup[u.id] = u
+
+    # Return data matching frontend FeedbackEntry interface
+    # Survey data is stored in JSONB 'data' column
     return [
         {
-            "id": str(f.id),
-            "user_id": str(f.user_id),
-            "document_id": str(f.document_id),
-            "question_key": f.question_key,
-            "answer_value": f.answer_value,
-            "feedback_type": f.feedback_type,
-            "corrected_value": f.corrected_value,
-            "remarks": f.remarks,
-            "created_at": f.created_at.isoformat() if f.created_at else None,
+            "id": str(s.id),
+            "user_id": str(s.user_id),
+            "user_email": user_lookup[s.user_id].email if s.user_id in user_lookup else "",
+            "user_name": user_lookup[s.user_id].full_name if s.user_id in user_lookup else None,
+            "status": s.status or "draft",
+            "role_position": (s.data or {}).get("role_position"),
+            "painful_part": (s.data or {}).get("painful_part"),
+            "what_surprised": (s.data or {}).get("what_surprised"),
+            "expected_not_do": (s.data or {}).get("expected_not_do"),
+            "confusing_part": (s.data or {}).get("confusing_part"),
+            "overall_satisfaction": (s.data or {}).get("overall_satisfaction"),
+            "specific_project_issue": (s.data or {}).get("specific_project_issue"),
+            "other_comments": (s.data or {}).get("other_comments"),
+            "contact_for_followup": (s.data or {}).get("contact_for_followup"),
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+            "submitted_at": s.submitted_at.isoformat() if s.submitted_at else None,
         }
-        for f in feedbacks
+        for s in surveys
     ]
