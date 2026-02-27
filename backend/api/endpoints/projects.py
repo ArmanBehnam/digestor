@@ -311,7 +311,11 @@ async def get_finalized_project(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get finalized/approved project data by project_key (hash/id)."""
+    """Get finalized/approved project data by project_key (hash/id).
+
+    Returns nested structure expected by the frontend:
+    { project_key, version, meta, snapshots, artifacts, audit, documents }
+    """
     try:
         project_uuid = uuid.UUID(project_key)
     except ValueError:
@@ -337,28 +341,105 @@ async def get_finalized_project(
         if doc.results:
             all_results.extend(doc.results)
 
-    data = await _project_to_dict_with_relations(project, db, include_snapshot=True)
-    data["results"] = all_results
-    data["documents"] = [
-        {
-            "id": str(d.id),
-            "file_name": d.file_name,
-            "s3_key": d.s3_key,
-            "file_size": d.file_size,
-            "status": d.status,
-            "processing_path": d.processing_path,
-            "confidence_avg": d.confidence_avg,
-            "processing_time_ms": d.processing_time_ms,
-            "results": d.results or [],
-            "created_at": d.created_at.isoformat() if d.created_at else None,
-        }
-        for d in docs
-    ]
-    # If snapshot is empty, build from results
-    if not data.get("pending_snapshot_json") and all_results:
-        data["pending_snapshot_json"] = all_results
+    # Resolve owner / supervisor / approver names
+    owner_name = None
+    supervisor_name = None
+    approver_name = None
+    if project.owner_id:
+        owner = (await db.execute(select(User).where(User.id == project.owner_id))).scalar_one_or_none()
+        if owner:
+            owner_name = owner.full_name or owner.email
+    if project.assigned_supervisor_id:
+        sup = (await db.execute(select(User).where(User.id == project.assigned_supervisor_id))).scalar_one_or_none()
+        if sup:
+            supervisor_name = sup.full_name or sup.email
+    if project.approved_by:
+        approver = (await db.execute(select(User).where(User.id == project.approved_by))).scalar_one_or_none()
+        if approver:
+            approver_name = approver.full_name or approver.email
 
-    return data
+    # Build snapshot JSON — fall back to merged results if empty
+    snapshot_json = project.pending_snapshot_json
+    if not snapshot_json and all_results:
+        snapshot_json = all_results
+
+    # Primary file path from first document
+    primary_file_path = docs[0].s3_key if docs else None
+
+    # Fetch edit history for audit log
+    audit = []
+    try:
+        from db.models import ResultEdit
+        edit_stmt = (
+            select(ResultEdit)
+            .where(ResultEdit.project_hash == project_key)
+            .order_by(ResultEdit.created_at.desc())
+        )
+        edits = (await db.execute(edit_stmt)).scalars().all()
+        audit = [
+            {
+                "id": str(e.id),
+                "row_id": e.row_id,
+                "column_name": e.column_name,
+                "old_value": e.old_value,
+                "new_value": e.new_value,
+                "edited_by_full_name": e.edited_by_full_name,
+                "edited_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in edits
+        ]
+    except Exception:
+        audit = []
+
+    # Build nested response matching frontend expectations
+    return {
+        "project_key": str(project.id),
+        "version": project.version or 1,
+        "meta": {
+            "id": str(project.id),
+            "project_id": str(project.id),
+            "project_name": project.name,
+            "submitted_by_full_name": owner_name,
+            "submitted_at": project.submitted_at.isoformat() if project.submitted_at else None,
+            "approved_by_full_name": approver_name,
+            "approved_at": project.approved_at.isoformat() if project.approved_at else None,
+            "finalized_by_full_name": approver_name,
+            "finalized_at": project.approved_at.isoformat() if project.approved_at else None,
+            "approval_status": project.approval_status,
+            "files_metadata": project.files_metadata or [],
+            "file_path": primary_file_path,
+            "notes": project.notes or "",
+            "assigned_supervisor_name": supervisor_name,
+            "assigned_supervisor_id": str(project.assigned_supervisor_id) if project.assigned_supervisor_id else None,
+            "review_note": project.review_note,
+            "status": project.status,
+        },
+        "snapshots": {
+            "html": project.pending_snapshot_html,
+            "json": snapshot_json,
+        },
+        "artifacts": [
+            # CSV and JSON export artifacts — built from S3 keys if available
+            {"type": "CSV", "path": f"exports/{project.id}/results.csv"},
+            {"type": "JSON", "path": f"exports/{project.id}/results.json"},
+        ],
+        "audit": audit,
+        "documents": [
+            {
+                "id": str(d.id),
+                "file_name": d.file_name,
+                "s3_key": d.s3_key,
+                "file_size": d.file_size,
+                "status": d.status,
+                "processing_path": d.processing_path,
+                "confidence_avg": d.confidence_avg,
+                "processing_time_ms": d.processing_time_ms,
+                "results": d.results or [],
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+            }
+            for d in docs
+        ],
+    }
 
 
 # ============================================================
