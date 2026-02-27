@@ -100,7 +100,15 @@ class OCRCredentialsError(OCRError):
 
 
 class ProcessingError(PDFProcessorError):
-    pass
+
+    def __init__(self, stage: str, document_id: str = "", details: str = ""):
+        message = f"Processing failed at stage '{stage}'"
+        if document_id:
+            message += f" for document {document_id}"
+        if details:
+            message += f": {details}"
+        context = {"stage": stage, "document_id": document_id, "details": details}
+        super().__init__(message, context)
 
 
 class ExtractionError(ProcessingError):

@@ -211,8 +211,22 @@ class PDFProcessor(ProcessingPipeline):
 
                 except Exception as e:
                     logger.error(f"Stage {stage.name} failed: {e}")
-                    if stage.name in ['pdf_text', 'finalization']:
+                    if stage.name == 'finalization':
                         raise ProcessingError(stage.name, document_id, str(e))
+                    elif stage.name == 'pdf_text':
+                        # pdf_text failure is NOT fatal — OCR stage can still extract from images
+                        logger.warning(f"pdf_text stage failed, will rely on OCR for text extraction: {e}")
+                        # Ensure total_pages is set even if pdfplumber fails
+                        if context['result'].total_pages == 0:
+                            try:
+                                import fitz
+                                doc = fitz.open(str(context['input_path']))
+                                context['result'].total_pages = len(doc)
+                                doc.close()
+                                logger.info(f"Set total_pages={context['result'].total_pages} via fitz fallback")
+                            except Exception as fitz_err:
+                                logger.error(f"fitz fallback also failed: {fitz_err}")
+                        continue
                     else:
                         logger.warning(f"Continuing processing despite {stage.name} failure")
                         continue
