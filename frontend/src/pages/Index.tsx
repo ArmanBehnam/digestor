@@ -900,7 +900,16 @@ const Index = () => {
       } else {
         // ----- SINGLE FILE: Existing per-document processing -----
         const singleDoc = documentTexts[0];
-        const processResponse = await apiClient.processDocument(singleDoc.document_id, singleDoc.extracted_text);
+        let processResponse: any = null;
+
+        try {
+          processResponse = await apiClient.processDocument(singleDoc.document_id, singleDoc.extracted_text);
+        } catch (processError) {
+          // Network timeout or connection reset — the backend may still be processing.
+          // Large PDFs (30MB+) can take 2+ minutes, exceeding the HTTP timeout.
+          // Fall through to polling — results will be saved to DB when backend finishes.
+          console.warn("processDocument request failed (likely timeout for large file), will poll for results:", processError);
+        }
 
         // If the processDocument response already contains results, use them directly
         // instead of polling (avoids race conditions and unnecessary waiting)
