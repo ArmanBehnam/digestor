@@ -13,7 +13,7 @@ logger = structlog.get_logger()
 
 # Thresholds
 CONFIDENCE_THRESHOLD = 0.70
-NOT_FOUND_THRESHOLD = 5
+NOT_FOUND_THRESHOLD = 15  # Structural docs often don't cover all 25 questions
 GARBAGE_RATIO_THRESHOLD = 0.15
 MIN_WORD_COUNT = 50
 

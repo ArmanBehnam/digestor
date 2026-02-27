@@ -900,8 +900,16 @@ const Index = () => {
       } else {
         // ----- SINGLE FILE: Existing per-document processing -----
         const singleDoc = documentTexts[0];
-        await apiClient.processDocument(singleDoc.document_id, singleDoc.extracted_text);
+        const processResponse = await apiClient.processDocument(singleDoc.document_id, singleDoc.extracted_text);
 
+        // If the processDocument response already contains results, use them directly
+        // instead of polling (avoids race conditions and unnecessary waiting)
+        if (processResponse?.results && Array.isArray(processResponse.results) && processResponse.results.length > 0) {
+          finalResults = processResponse.results;
+          // Skip polling entirely — results are already available
+        }
+
+        // Only poll if we don't already have results from processDocument
         const MAX_POLL_ATTEMPTS = 3600;
         const STALE_THRESHOLD = 10 * 60 * 1000;
         const PROGRESS_SAVED_STALE_THRESHOLD = 3 * 60 * 1000;
@@ -912,7 +920,7 @@ const Index = () => {
         let lastUpdatedAt = 0;
         let autoRetryCount = 0;
 
-        while (pollAttempts < MAX_POLL_ATTEMPTS) {
+        while (!finalResults && pollAttempts < MAX_POLL_ATTEMPTS) {
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           let statusData: any;
