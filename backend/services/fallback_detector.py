@@ -13,7 +13,7 @@ logger = structlog.get_logger()
 
 # Thresholds
 CONFIDENCE_THRESHOLD = 0.70
-NOT_FOUND_THRESHOLD = 25  # Disabled: ECS worker fallback path is broken (not picking up jobs)
+NOT_FOUND_THRESHOLD = 5  # If >5 answers "Not Found", fallback to AWS OCR for better extraction
 GARBAGE_RATIO_THRESHOLD = 0.15
 MIN_WORD_COUNT = 50
 
