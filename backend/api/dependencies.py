@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from auth.cognito import verify_cognito_token
 from db.session import get_async_session
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 async def get_db() -> AsyncSession:
@@ -22,6 +22,12 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
     """Validate Cognito JWT and return user claims."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = credentials.credentials
     try:
         claims = await verify_cognito_token(token)

@@ -53,8 +53,9 @@ class ApiClient {
       headers,
     });
 
-    // Handle 401 — try token refresh
-    if (response.status === 401) {
+    // Handle 401 or 403 — try token refresh
+    // HTTPBearer returns 403 when no token is present, 401 when token is invalid/expired
+    if (response.status === 401 || response.status === 403) {
       const refreshed = await this.refreshToken();
       if (refreshed) {
         headers['Authorization'] = `Bearer ${this.getAuthToken()}`;
