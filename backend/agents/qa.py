@@ -118,47 +118,59 @@ class EngineeringQAAgent(Talk2DrawingsBaseAgent):
         return 'unknown', 'unknown'
 
     def get_enhanced_system_prompt(self):
-        return """Extract answers from engineering documents.
+        return """You are an expert structural engineering document analyst. Extract answers from OCR-processed engineering drawings and specifications.
 
-    Return ONLY valid JSON: {"Q1": {"answer": "value", "source_pdf": "file.pdf", "page_number": 2, "confidence": "90%"}, ...}
+IMPORTANT: The text comes from OCR on engineering drawings, so words may be jumbled or out of order. Look for INDIVIDUAL values, numbers, and technical terms rather than complete sentences. Each page includes:
+- extracted_text: Raw OCR text (may be spatially disordered)
+- structured_data: Pre-extracted values from regex pattern matching (PRIORITIZE these - they are high-confidence extractions)
+- table_data: Data from detected tables
 
-    Search for: building codes (IBC, ASCE), deflection ratios (L/240), loads (psf, mph), seismic params (Sds, Sd1), material specs.
+PRIORITIZE structured_data matches over raw text. If structured_data contains a value for a category (e.g., building_codes, load_requirements), use that value.
 
+Return ONLY valid JSON: {"Q1": {"answer": "value", "source_pdf": "file.pdf", "page_number": 2, "confidence": "90%"}, ...}
 
-    **Rules:**
-    - JSON only, no explanations
-    - Extract exact page_number and source_pdf
-    - All 25 questions required (Q1-Q25)
-    - If not found: "Not Found", "unknown", 0
+**Extraction Strategy:**
+1. First check structured_data for pre-extracted values (building codes, loads, deflection criteria, seismic params)
+2. Then scan extracted_text for keywords: IBC, ASCE, L/240, L/360, psf, mph, Sds, Sd1, GCpi, etc.
+3. Look for numbers near engineering keywords even if text is disordered
+4. For deflection limits, look for patterns like L/XXX or fractions
+5. For loads, look for numbers followed by psf, plf, mph, ksi
 
-    Process these 25 questions: [questions listed 1-25]
-    1. What building code and year is referenced?
-    2. Is an ASCE 7 standard mentioned? Which version?
-    3. What are the exterior wall deflection limits?
-    4. What is the interior wall deflection limit?
-    5. What is the floor joist framing deflection limit?
-    6. What is the roof rafter framing deflection limit?
-    7. What is the ceiling joist framing deflection limit?
-    8. What is the maximum primary structure vertical deflection due to live load?
-    9. What is the basic wind speed (in mph)?
-    10. What is the building risk category (e.g., I, II, III)?
-    11. What is the exposure category (e.g., B, C)?
-    12. What is the internal pressure coefficient (GCpi)?
-    13. What is the roof live load?
-    14. What is the roof dead load?
-    15. What is the ground snow load (Pg)?
-    16. What is the snow load importance factor (Is)?
-    17. What is the snow load exposure factor (Ce)?
-    18. What is the thermal factor (Ct)?
-    19. What is the flat roof snow load (Pf)?
-    20. What is the seismic design category (e.g., A, B, C)?
-    21. What is the seismic importance factor (Ie)?
-    22. What is the component importance factor (Ip)?
-    23. What is the site class (e.g., D, E, F)?
-    24. What is the value of Sds?
-    25. What is the value of Sd1?
+**Rules:**
+- JSON only, no explanations
+- Extract exact page_number and source_pdf
+- All 25 questions required (Q1-Q25)
+- If not found: "Not Found", "unknown", 0
+- When structured_data has a match, use confidence 90%+
 
-    REMEMBER: ONLY JSON - extract exact page_number and source_pdf from the data."""
+Process these 25 questions:
+1. What building code and year is referenced? (look in structured_data.building_codes)
+2. Is an ASCE 7 standard mentioned? Which version? (look for ASCE 7-XX)
+3. What are the exterior wall deflection limits? (look in structured_data.load_requirements for L/XXX)
+4. What is the interior wall deflection limit?
+5. What is the floor joist framing deflection limit?
+6. What is the roof rafter framing deflection limit?
+7. What is the ceiling joist framing deflection limit?
+8. What is the maximum primary structure vertical deflection due to live load?
+9. What is the basic wind speed (in mph)? (look in structured_data.load_requirements)
+10. What is the building risk category (e.g., I, II, III)?
+11. What is the exposure category (e.g., B, C)?
+12. What is the internal pressure coefficient (GCpi)?
+13. What is the roof live load? (look for XX psf)
+14. What is the roof dead load?
+15. What is the ground snow load (Pg)?
+16. What is the snow load importance factor (Is)?
+17. What is the snow load exposure factor (Ce)?
+18. What is the thermal factor (Ct)?
+19. What is the flat roof snow load (Pf)?
+20. What is the seismic design category (e.g., A, B, C)?
+21. What is the seismic importance factor (Ie)?
+22. What is the component importance factor (Ip)?
+23. What is the site class (e.g., D, E, F)?
+24. What is the value of Sds?
+25. What is the value of Sd1?
+
+REMEMBER: ONLY JSON output. Prioritize structured_data matches. Extract page_number and source_pdf."""
 
     async def process(self, ocr_data: Dict[str, Any], context: Dict[str, Any] = None) -> Dict[str, Any]:
         if not self.llm_registry:
@@ -200,19 +212,44 @@ class EngineeringQAAgent(Talk2DrawingsBaseAgent):
             raise Exception(f"QA processing failed: {e}")
 
     async def _process_with_metadata(self, structured_payload: Dict) -> Dict[str, Any]:
-        minimal_payload = {
-            'pages_with_metadata': [
-                {
-                    'extracted_text': page.get('extracted_text', ''),
-                    'page_number': page.get('page_number'),
-                    'source_pdf': page.get('source_pdf'),
-                    'section': page.get('section', 'N/A')
-                }
-                for page in structured_payload['pages_with_metadata']
-            ]
-        }
+        # Include structured_data (regex pattern matches) and table data in payload
+        # These contain pre-extracted engineering values that the LLM should prioritize
+        payload_pages = []
+        for page in structured_payload['pages_with_metadata']:
+            page_entry = {
+                'extracted_text': page.get('extracted_text', ''),
+                'page_number': page.get('page_number'),
+                'source_pdf': page.get('source_pdf'),
+                'section': page.get('section', 'N/A'),
+            }
+            # Include regex-extracted structured data (building codes, loads, etc.)
+            structured_data = page.get('structured_data', {})
+            if structured_data:
+                page_entry['structured_data'] = structured_data
+            # Include table elements (gridding results)
+            table_elements = page.get('table_elements', [])
+            if table_elements:
+                page_entry['table_data'] = [
+                    {'text': t.get('text', ''), 'confidence': t.get('confidence', 0)}
+                    for t in table_elements[:20]  # Limit to avoid token overflow
+                ]
+            payload_pages.append(page_entry)
 
+        # Log what structured data we found for debugging
+        all_structured = {}
+        for p in payload_pages:
+            for cat, vals in p.get('structured_data', {}).items():
+                if cat not in all_structured:
+                    all_structured[cat] = []
+                all_structured[cat].extend(vals if isinstance(vals, list) else [vals])
+        if all_structured:
+            print(f"Structured data found across all pages: {json.dumps({k: v[:5] for k, v in all_structured.items()}, default=str)}")
+        else:
+            print("No structured data found from pattern extraction")
+
+        minimal_payload = {'pages_with_metadata': payload_pages}
         json_payload = json.dumps(minimal_payload, indent=2)
+        print(f"LLM payload size: {len(json_payload)} chars (~{len(json_payload)//4} tokens)")
 
         enhanced_prompt = self.get_enhanced_system_prompt()
 
@@ -231,7 +268,7 @@ class EngineeringQAAgent(Talk2DrawingsBaseAgent):
             print(f"Enhanced prompt failed: {e}, using fallback")
             combined_text = "\n\n".join(
                 f"[Source: {page.get('source_pdf', 'unknown')}, Page: {page.get('page_number', 'unknown')}]\n{page.get('extracted_text', '')}"
-                for page in minimal_payload['pages_with_metadata'])
+                for page in payload_pages)
             fallback_answers = self.llm_registry.answer_questions_with_fallback(combined_text, self.questions)
             return self._reconstruct_missing_metadata(fallback_answers, structured_payload)
 
