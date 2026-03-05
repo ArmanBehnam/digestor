@@ -13,7 +13,7 @@ def _load_secrets_from_aws():
     Fetch secrets from AWS Secrets Manager.
     Returns a dict of secret key-value pairs, or empty dict on failure.
     """
-    secret_name = os.getenv('SECRETS_MANAGER_SECRET_NAME', 'digestor/production/secrets')
+    secret_name = os.getenv('SECRETS_MANAGER_SECRET_NAME', 'digetor/production/secrets')
     region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
 
     try:

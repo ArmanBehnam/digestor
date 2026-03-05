@@ -16,7 +16,7 @@ This project uses GitHub Actions for automated build, test, and deployment:
 ## Step 1: Create GitHub Repository
 
 ```bash
-cd C:\Arman\Clark\Week30\digestor-unified
+cd /path/to/digestor-unified
 
 # Add remote (replace with your repo URL)
 git remote add origin https://github.com/YOUR_ORG/digestor-unified.git

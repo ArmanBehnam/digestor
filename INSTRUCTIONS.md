@@ -4,9 +4,9 @@
 
 | Item | Value |
 |------|-------|
-| **App URL** | **https://r2jmucqgrt.us-east-1.awsapprunner.com** |
+| **App URL** | **http://digestor-dev-1792703510.us-east-1.elb.amazonaws.com** |
 | **Version** | **2.0.0** |
-| Hosting | AWS App Runner (service: `digetor-web`) |
+| Hosting | AWS ECS Fargate behind ALB (`digestor-dev` cluster) |
 | ECR Image | `800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor` |
 | Health Check | `GET /api/health` (returns DB + Redis status) |
 | Source Repo | `https://cdesplx.visualstudio.com/_git/Digestor` (branch: `Arman`) |
@@ -108,7 +108,7 @@ S3_BUCKET=herokubucketclark-ocr-4681
 | Username | `digestor` |
 | Instance class | `db.t3.micro` |
 
-**Connection (App Runner):**
+**Connection (ECS / Production):**
 ```
 DATABASE_URL=postgresql+asyncpg://digestor:<password>@digestor-dev.cqn6ues4ojqb.us-east-1.rds.amazonaws.com:5432/digestor_dev
 ```
@@ -190,47 +190,11 @@ docker push 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest
 
 ---
 
-## AWS App Runner (Current Deployment)
+## AWS App Runner (Legacy — No Longer Active)
 
-| Item | Value |
-|------|-------|
-| Service name | `digetor-web` |
-| Service URL | `https://r2jmucqgrt.us-east-1.awsapprunner.com` |
-| Source | ECR image `800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest` |
-| Instance Role | `arn:aws:iam::800712212732:role/digetor-apprunner-role` |
-| ECR Access Role | `arn:aws:iam::800712212732:role/digetor-apprunner-ecr-role` |
-| VPC Connector | `digetor-vpc-connector` (for RDS + Redis access) |
-| Health Check | `GET /api/health` (interval 20s, 1 healthy / 5 unhealthy) |
-| CPU / Memory | 1024 (1 vCPU) / 2048 MB |
-| Console | `https://us-east-1.console.aws.amazon.com/apprunner/home?region=us-east-1#/services` |
-| Logs | App Runner Console → `digetor-web` → Logs tab |
-
-**App Runner Environment Variables:**
-```
-PROCESS_TYPE=web
-ENVIRONMENT=production
-DATABASE_URL=postgresql+asyncpg://digestor:<password>@digestor-dev.cqn6ues4ojqb.us-east-1.rds.amazonaws.com:5432/digestor_dev
-REDIS_URL=redis://digetor-redis.uluqxv.0001.use1.cache.amazonaws.com:6379
-S3_BUCKET=herokubucketclark-ocr-4681
-COGNITO_USER_POOL_ID=us-east-1_DGMrbW6Vw
-COGNITO_APP_CLIENT_ID=6k00q57poml1uooj9aal7tga8c
-USE_SECRETS_MANAGER=true
-SECRETS_MANAGER_SECRET_NAME=digetor/production/secrets
-ALLOWED_ORIGINS=https://r2jmucqgrt.us-east-1.awsapprunner.com
-LOG_LEVEL=INFO
-```
-
-**Deploy update:**
-```bash
-# Build and push image
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 800712212732.dkr.ecr.us-east-1.amazonaws.com
-docker build -t digetor -f infrastructure/docker/Dockerfile .
-docker tag digetor:latest 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest
-docker push 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor:latest
-
-# Trigger App Runner redeployment
-aws apprunner start-deployment --service-arn arn:aws:apprunner:us-east-1:800712212732:service/digetor-web/a8a674c668a54cb3bf9ce88f2879e18e --region us-east-1
-```
+> **Note:** The app was previously deployed on App Runner but has been migrated to ECS Fargate behind ALB.
+> The App Runner service (`digetor-web`) at `https://r2jmucqgrt.us-east-1.awsapprunner.com` is no longer the active deployment.
+> See "AWS ECS" and "AWS ALB" sections above for the current infrastructure.
 
 ---
 
@@ -432,9 +396,9 @@ waf_web_acl_arn      -> WAF Web ACL ARN
 
 | Service | URL |
 |---------|-----|
-| **Live App** | `https://r2jmucqgrt.us-east-1.awsapprunner.com` |
-| **App Runner Console** | `https://us-east-1.console.aws.amazon.com/apprunner/home?region=us-east-1#/services` |
-| **App Runner Logs** | App Runner Console → `digetor-web` → Logs tab |
+| **Live App (ECS/ALB)** | `http://digestor-dev-1792703510.us-east-1.elb.amazonaws.com` |
+| **ECS Console** | `https://us-east-1.console.aws.amazon.com/ecs/v2/clusters/digestor-dev/services` |
+| **ECS Logs** | CloudWatch → Log group `/ecs/digestor-dev` |
 | Cognito User Pool | `https://us-east-1.console.aws.amazon.com/cognito/v2/idp/user-pools/us-east-1_DGMrbW6Vw/users` |
 | ECR Repository | `https://us-east-1.console.aws.amazon.com/ecr/repositories/private/800712212732/digetor` |
 | S3 Bucket | `https://s3.console.aws.amazon.com/s3/buckets/herokubucketclark-ocr-4681` |
@@ -467,7 +431,7 @@ waf_web_acl_arn      -> WAF Web ACL ARN
 | `AZURE_ENDPOINT` | Azure OCR fallback | `https://....cognitiveservices.azure.com/` |
 | `AZURE_API_KEY` | Azure OCR fallback | `...` |
 | `USE_SECRETS_MANAGER` | Enable SM resolution | `true` / `false` |
-| `SECRETS_MANAGER_SECRET_NAME` | SM secret path | `digestor/production/secrets` |
+| `SECRETS_MANAGER_SECRET_NAME` | SM secret path | `digetor/production/secrets` |
 | `ALLOWED_ORIGINS` | CORS origins | `http://localhost:8080,http://localhost:5173` |
 | `SQL_ECHO` | Debug SQL queries | `false` |
 | `LOG_LEVEL` | Logging verbosity | `INFO` |
