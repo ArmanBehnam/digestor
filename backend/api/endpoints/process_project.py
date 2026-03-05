@@ -113,7 +113,10 @@ async def process_project(
             doc.extracted_text = doc_texts[doc_id_str]
         doc.status = "llm_processing"
         doc.processing_path = "pdfjs"
-    await db.flush()
+    # COMMIT now so the 'llm_processing' status is persisted even if the HTTP
+    # connection is dropped (ALB timeout). Without this, a disconnect causes
+    # session.rollback() → statuses revert → frontend sees stale 'error' status.
+    await db.commit()
 
     # Combine all text with file separators
     combined_parts = []
