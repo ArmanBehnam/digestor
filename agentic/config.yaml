@@ -1,0 +1,300 @@
+
+ocr_engines:
+  preferred_engine: "aws_textract"
+  fallback_engines: ["azure_ocr", "claude_ocr", "tesseract"]
+
+
+validation_rules:
+  {
+  "building code": {
+    "match": "building code",
+    "type": "regex",
+    "pattern": ".*",
+    "not_found": "ok"
+  },
+  "asce reference": {
+    "match": "asce 7",
+    "type": "regex",
+    "pattern": ".*",
+    "not_found": "ok"
+  },
+  "deflection": {
+    "match": "deflection",
+    "type": "numeric_range",
+    "min": 80,
+    "max": 1200,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "basic wind speed": {
+    "match": "basic wind speed",
+    "type": "any_in_range",
+    "min": 30,
+    "max": 300,
+    "unit": "mph",
+    "not_found": "fail"
+  },
+  "risk category": {
+    "match": "risk category",
+    "type": "enum",
+    "allowed": ["II", "III", "IV"],
+    "not_found": "fail"
+  },
+  "exposure category": {
+    "match": "exposure category",
+    "type": "enum",
+    "allowed": ["B", "C", "D"],
+    "not_found": "fail"
+  },
+  "internal pressure coefficient": {
+    "match": "internal pressure coefficient",
+    "type": "numeric_range",
+    "min": 0.01,
+    "max": 1.0,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "roof live load": {
+    "match": "roof live load",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 200,
+    "unit": "psf",
+    "not_found": "fail"
+  },
+  "roof dead load": {
+    "match": "roof dead load",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 100,
+    "unit": "psf",
+    "not_found": "fail"
+  },
+  "ground snow load pg": {
+    "match": "ground snow load",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 800,
+    "unit": "psf",
+    "not_found": "fail"
+  },
+  "snow importance factor is": {
+    "match": "snow importance factor",
+    "type": "numeric_range",
+    "min": 1,
+    "max": 5,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "snow exposure factor ce": {
+    "match": "snow exposure factor",
+    "type": "numeric_range",
+    "min": 0.7,
+    "max": 1.2,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "thermal factor ct": {
+    "match": "thermal factor",
+    "type": "enum",
+    "allowed": [ "0.85", "1.0", "1.2" ],
+    "not_found": "fail"
+  },
+  "flat roof snow load pf": {
+    "match": "flat roof snow load",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 600,
+    "unit": "psf",
+    "not_found": "fail"
+  },
+  "seismic risk category": {
+    "match": "seismic risk category",
+    "type": "enum",
+    "allowed": ["I", "II", "III", "IV"],
+    "not_found": "fail"
+  },
+  "seismic importance factor ie": {
+    "match": "seismic importance factor",
+    "type": "numeric_range",
+    "min": 1,
+    "max": 1.5,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "component importance factor ip": {
+    "match": "component importance factor",
+    "type": "numeric_range",
+    "min": 1,
+    "max": 1.5,
+    "unit": "",
+    "not_found": "fail"
+  },
+  "site class": {
+    "match": "site class",
+    "type": "enum",
+    "allowed": ["A", "B", "C", "D", "E", "F"],
+    "not_found": "fail"
+  },
+  "sds": {
+    "match": "sds",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 4.0,
+    "unit": "g",
+    "not_found": "fail"
+  },
+  "sd1": {
+    "match": "sd1",
+    "type": "numeric_range",
+    "min": 0,
+    "max": 4.0,
+    "unit": "g",
+    "not_found": "fail"
+  }
+}
+
+#--------------------------------------------------------------------------------
+questions:
+  # 🏛 Building Code
+  - "What building code and year of the building code is referenced (e.g., IBC, NYSBC, NYCBC, Chicago Building Code)?"
+  - "Is an ASCE 7 standard mentioned? If so, which version (e.g., ASCE 7-10, 7-16)?"
+
+  # 🏗️ Deflection Criteria
+  - "What are the exterior wall deflection limits?"
+  - "What is the interior wall deflect  ion limit?"
+  - "What is the floor joist framing deflection limit?"
+  - "What is the roof rafter framing deflection limit?"
+  - "What is the ceiling joist framing deflection limit?"
+  - "What is the maximum primary structure vertical deflection due to live load?"
+
+  # 🌬 Wind Load Criteria
+  - "What is the basic wind speed (in mph)?"
+  - "What is the building risk category (e.g., I, II, III)?"
+  - "What is the exposure category (e.g., B, C)?"
+  - "What is the internal pressure coefficient (GCpi)?"
+
+  # ⚖️ Gravity Loads
+  - "What is the roof live load?"
+  - "What is the roof dead load?"
+
+  # ❄️ Snow Load Criteria
+  - "What is the ground snow load (Pg)?"
+  - "What is the snow load importance factor (Is)?"
+  - "What is the snow load exposure factor (Ce)?"
+  - "What is the thermal factor (Ct)?"
+  - "What is the flat roof snow load (Pf)?"
+
+  # 🌎 Seismic Load Criteria
+  - "What is the seismic design category (e.g., A, B, C)?"
+  - "What is the seismic importance factor (Ie)?"
+  - "What is the component importance factor (Ip)?"
+  - "What is the site class (e.g., D, E, F)?"
+  - "What is the value of Sds ?"
+  - "What is the value of Sd1?"
+
+category_keywords:
+  {building_code: ["IBC", "building code", "NYSBC", "NYCBC", "Chicago Building Code"],
+  asce_standard: ["ASCE 7", "ASCE 7-10", "ASCE 7-16"],
+  deflection: ["deflection", "L/", "vertical deflection"],
+  wind: ["wind speed", "exposure", "internal pressure", "GCpi"],
+  snow: ["snow load", "Pg", "Is", "Ce", "Ct", "Pf"],
+  gravity: ["live load", "dead load"],
+  seismic: ["seismic", "Sds", "Sd1", "site class", "importance factor", "seismic design category"]}
+
+# user_options:
+use_ocr: true
+extract_tables: true
+extract_patterns: true
+enhance_images: false
+custom_keywords: []  # e.g. ["beam", "column"]
+
+# LLM Engines Configuration (hierarchical fallback)
+llm_engines:
+  preferred_engine: "openai_gpt4o"
+  fallback_engines: ["anthropic_sonnet", "deepseek_r1"]
+  confidence_threshold: 0.5
+  timeout_seconds: 120
+  max_retries: 3
+
+# Advanced Prompt Engineering Configuration
+prompt_engineering:
+  enabled: false  # Set to true to enable dynamic prompt optimization (default: false)
+  optimization_level: "balanced"  # Options: "conservative", "balanced", "aggressive"
+  cache_prompts: true  # Cache optimized prompts for performance
+
+  # Context Analysis Features
+  context_analysis:
+    enabled: true
+    analyze_domains: true  # Detect engineering domains (structural, seismic, etc.)
+    analyze_document_type: true  # Detect specs, drawings, reports
+    analyze_technical_level: true  # Assess complexity level
+    extract_key_terms: true  # Find important technical terms
+    detect_document_structure: true  # Identify tables, lists, sections
+
+  # Question Optimization Features
+  question_optimization:
+    enabled: true
+    classify_question_types: true  # Identification, numerical, specification, etc.
+    detect_required_formats: true  # Units, ratios, years, etc.
+    assess_complexity: true  # Simple vs complex questions
+    optimize_search_terms: true  # Enhance search strategies
+
+  # Domain-Specific Adaptation
+  domain_adaptation:
+    enabled: true
+    building_codes: true  # Optimize for IBC, ASCE, AISC references
+    seismic_parameters: true  # Optimize for Sds, Sd1, site class
+    wind_loads: true  # Optimize for wind speeds, exposure categories
+    structural_elements: true  # Optimize for deflection limits, load capacities
+    materials: true  # Optimize for concrete, steel, masonry properties
+    loads_analysis: true  # Optimize for dead, live, snow, wind loads
+
+  # Prompt Customization
+  prompt_customization:
+    enabled: true
+    dynamic_system_messages: true  # Adapt system message to context
+    context_specific_instructions: true  # Add domain-specific guidance
+    optimized_search_strategies: true  # Provide targeted search methods
+    format_requirements: true  # Specify answer format requirements
+    error_handling_guidance: true  # OCR error handling instructions
+
+  # Confidence and Quality Tuning
+  confidence_tuning:
+    enabled: true
+    adaptive_confidence_thresholds: true  # Adjust based on question type
+    uncertainty_detection: true  # Identify and handle uncertain responses
+    cross_reference_validation: true  # Validate answers across sections
+    context_verification: true  # Verify answers against document context
+
+  # Performance and Monitoring
+  performance:
+    max_prompt_length: 8000  # Maximum prompt length in characters
+    optimization_timeout: 30  # Timeout for prompt optimization in seconds
+    enable_parallel_processing: true  # Process multiple optimizations in parallel
+
+  # Debugging and Analytics
+  monitoring:
+    log_optimization_stats: true  # Log performance statistics
+    save_optimized_prompts: false  # Save prompts to files for debugging
+    track_effectiveness: true  # Monitor optimization effectiveness
+    performance_metrics: true  # Collect detailed performance metrics
+
+AWS_ACCESS_KEY_ID : "AKIA3U3RKYD6JK4EUIGC" #"AKIA3U3RKYD6DYRAWRF7" #"ASIA3U3RKYD6KJNVL7J2"
+AWS_SECRET_ACCESS_KEY : "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"  #"c9MGqMoawrfc3VY0nQJrG74qHmnmIOCfJ5vjudGy" #"RUtNIIYpJ+/LJE0oY0c0T0+S3WRJHL4329cMSTgK"
+AWS_DEFAULT_REGION : "us-east-1"
+
+# Primary LLM API Keys
+openai_api_key: "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"
+
+# Fallback LLM API Keys
+anthropic_api_key: ""
+deepseek_api_key: ""
+
+# Azure OCR Configuration (used by ocr_tools)
+AZURE_ENDPOINT: "https://ocr-document-cde.cognitiveservices.azure.com/"
+AZURE_API_KEY: "1YOi3XppiUJNkPqimlGKtVsybyr3vxaZOZyQ353oOXt5OxA32fHVJQQJ99BGACYeBjFXJ3w3AAALACOG4WOR"
+
+
+save_ocr_json: true
+
