@@ -19,7 +19,7 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-S3_BUCKET = os.getenv("S3_BUCKET", "digestor-unified-storage")
+S3_BUCKET = os.getenv("S3_BUCKET", "digestor-unified-uploads-dev")
 
 
 def _get_rq_queue() -> Queue:

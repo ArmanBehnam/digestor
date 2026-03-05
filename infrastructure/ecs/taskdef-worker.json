@@ -12,7 +12,7 @@
         { "name": "AWS_REGION", "value": "us-east-1" },
         { "name": "AWS_DEFAULT_REGION", "value": "us-east-1" },
         { "name": "LOG_LEVEL", "value": "INFO" },
-        { "name": "S3_BUCKET", "value": "herokubucketclark-ocr-4681" },
+        { "name": "S3_BUCKET", "value": "digestor-unified-uploads-dev" },
         { "name": "COGNITO_USER_POOL_ID", "value": "us-east-1_DGMrbW6Vw" },
         { "name": "COGNITO_APP_CLIENT_ID", "value": "6k00q57poml1uooj9aal7tga8c" },
         { "name": "DATABASE_URL", "value": "DATABASE_URL_PLACEHOLDER" },

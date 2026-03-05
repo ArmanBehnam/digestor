@@ -86,13 +86,13 @@ COGNITO_APP_CLIENT_ID=6k00q57poml1uooj9aal7tga8c
 
 | Item | Value |
 |------|-------|
-| **Active bucket** | **`herokubucketclark-ocr-4681`** |
+| **Active bucket** | **`digestor-unified-uploads-dev`** |
 | Encryption | AES-256 (server-side) |
 | Public access | Blocked (all 4 settings) |
 
 **Env var:**
 ```
-S3_BUCKET=herokubucketclark-ocr-4681
+S3_BUCKET=digestor-unified-uploads-dev
 ```
 
 ---
@@ -268,7 +268,7 @@ arn:aws:acm:us-east-1:800712212732:certificate/<FILL_IN>
   "OPENAI_API_KEY": "sk-...",
   "AZURE_ENDPOINT": "https://ocr-document-cde.cognitiveservices.azure.com/",
   "AZURE_API_KEY": "...",
-  "S3_BUCKET_NAME": "herokubucketclark-ocr-4681",
+  "S3_BUCKET_NAME": "digestor-unified-uploads-dev",
   "AWS_DEFAULT_REGION": "us-east-1",
   "REDIS_URL": "redis://digetor-redis.uluqxv.0001.use1.cache.amazonaws.com:6379"
 }
@@ -401,7 +401,7 @@ waf_web_acl_arn      -> WAF Web ACL ARN
 | **ECS Logs** | CloudWatch → Log group `/ecs/digestor-dev` |
 | Cognito User Pool | `https://us-east-1.console.aws.amazon.com/cognito/v2/idp/user-pools/us-east-1_DGMrbW6Vw/users` |
 | ECR Repository | `https://us-east-1.console.aws.amazon.com/ecr/repositories/private/800712212732/digetor` |
-| S3 Bucket | `https://s3.console.aws.amazon.com/s3/buckets/herokubucketclark-ocr-4681` |
+| S3 Bucket | `https://s3.console.aws.amazon.com/s3/buckets/digestor-unified-uploads-dev` |
 | RDS Instance | `https://us-east-1.console.aws.amazon.com/rds/home?region=us-east-1#database:id=digestor-dev` |
 | Secrets Manager | `https://us-east-1.console.aws.amazon.com/secretsmanager/listsecrets?region=us-east-1` |
 | Source Code | `https://cdesplx.visualstudio.com/_git/Digestor?version=GBArman` |
@@ -422,7 +422,7 @@ waf_web_acl_arn      -> WAF Web ACL ARN
 | `RDS_DB_NAME` | DB connection (Terraform path) | `digestor_dev` |
 | `RDS_SECRET_ARN` | DB password from Secrets Manager | `arn:aws:secretsmanager:...` |
 | `REDIS_URL` | Redis/RQ connection | `redis://localhost:6379` |
-| `S3_BUCKET` | S3 uploads | `herokubucketclark-ocr-4681` |
+| `S3_BUCKET` | S3 uploads | `digestor-unified-uploads-dev` |
 | `COGNITO_USER_POOL_ID` | JWT verification | `us-east-1_DGMrbW6Vw` |
 | `COGNITO_APP_CLIENT_ID` | Cognito auth flows | `6k00q57poml1uooj9aal7tga8c` |
 | `OPENAI_API_KEY` | Primary LLM | `sk-...` |

@@ -162,11 +162,28 @@ async def process_project(
     # --- PDF.js Combined Processing ---
     from api.endpoints.process_pdfjs import run_pdfjs_processing
 
-    pdfjs_results, text_quality = await run_pdfjs_processing(
-        extracted_text=combined_text,
-        text_positions=None,
-        doc_id=f"project:{req.project_id}",
-    )
+    try:
+        pdfjs_results, text_quality = await run_pdfjs_processing(
+            extracted_text=combined_text,
+            text_positions=None,
+            doc_id=f"project:{req.project_id}",
+        )
+    except Exception as llm_err:
+        # LLM processing failed — mark all docs as 'error' so frontend
+        # gets a clear signal instead of polling forever.
+        logger.error(
+            "project_llm_processing_failed",
+            project_id=req.project_id,
+            error=str(llm_err),
+        )
+        for doc in all_docs:
+            doc.status = "error"
+            doc.fallback_reason = f"LLM processing error: {str(llm_err)[:200]}"
+        await db.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"LLM processing failed: {str(llm_err)[:200]}",
+        )
 
     # --- Evaluate Quality on COMBINED results (Auto mode only) ---
     should_fallback = False
@@ -194,9 +211,11 @@ async def process_project(
             doc.fallback_reason = fallback_reason
         flag_modified(doc, "results")
 
-    await db.flush()
+    # COMMIT results immediately so 'complete' status is persisted.
+    # This prevents ALB timeouts or worker fallback jobs from reverting the status.
+    await db.commit()
 
-    # Handle fallback — enqueue AWS in background
+    # Handle fallback — enqueue AWS in background (only if really needed)
     if should_fallback:
         logger.info(
             "project_combined_fallback_to_aws",

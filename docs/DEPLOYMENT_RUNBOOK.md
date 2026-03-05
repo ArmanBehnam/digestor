@@ -46,7 +46,7 @@ terraform output
 # ecr_repository_url = "800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor"
 # rds_endpoint       = "digestor-dev.XXXXX.us-east-1.rds.amazonaws.com"
 # cognito_pool_id    = "us-east-1_XXXXX"
-# s3_bucket          = "herokubucketclark-ocr-4681"
+# s3_bucket          = "digestor-unified-uploads-dev"
 ```
 
 ---

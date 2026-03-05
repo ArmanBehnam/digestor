@@ -17,7 +17,12 @@ import io
 
 
 def update_document_status(document_id, status, results=None, confidence_avg=None, processing_time_ms=None):
-    """Update DocumentProcessing record in RDS (synchronous, for worker use)."""
+    """Update DocumentProcessing record in RDS (synchronous, for worker use).
+
+    IMPORTANT: Never overwrite a 'complete' document with 'failed'/'error'.
+    The pdfjs path may have already completed successfully before the
+    AWS fallback worker runs, so we must not corrupt its results.
+    """
     if not document_id:
         print("[DB] No document_id provided, skipping DB status update")
         return
@@ -32,6 +37,20 @@ def update_document_status(document_id, status, results=None, confidence_avg=Non
         import psycopg2.extras
         conn = psycopg2.connect(sync_url)
         cur = conn.cursor()
+
+        # Guard: don't downgrade a 'complete' document to 'failed'/'error'
+        if status in ('failed', 'error'):
+            cur.execute(
+                "SELECT status FROM document_processing WHERE id = %s",
+                (document_id,)
+            )
+            row = cur.fetchone()
+            if row and row[0] == 'complete':
+                print(f"[DB] Document {document_id} is already 'complete', skipping downgrade to '{status}'")
+                cur.close()
+                conn.close()
+                return
+
         if results is not None:
             cur.execute(
                 """UPDATE document_processing
