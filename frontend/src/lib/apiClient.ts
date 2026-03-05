@@ -87,7 +87,13 @@ class ApiClient {
         const errorJson = JSON.parse(errorText);
         errorDetail = errorJson.detail || errorText;
       } catch {
-        errorDetail = errorText;
+        // If the response is HTML (e.g. ALB 502/504 error page), extract a clean message
+        if (errorText.includes('<html') || errorText.includes('<!DOCTYPE')) {
+          const titleMatch = errorText.match(/<title>(.*?)<\/title>/i);
+          errorDetail = titleMatch ? titleMatch[1] : `Server error (HTTP ${response.status})`;
+        } else {
+          errorDetail = errorText;
+        }
       }
       throw new ApiError(response.status, errorDetail);
     }

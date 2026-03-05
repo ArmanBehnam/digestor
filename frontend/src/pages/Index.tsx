@@ -880,16 +880,27 @@ const Index = () => {
       if (files.length > 1 && serverProjectId) {
         // ----- MULTI-FILE: Combined project processing -----
         // Sends ALL extracted text to backend, which combines and runs LLM once
-        await apiClient.processProject({
-          project_id: serverProjectId,
-          documents: documentTexts,
-        });
+        try {
+          const projectResponse = await apiClient.processProject({
+            project_id: serverProjectId,
+            documents: documentTexts,
+          });
+          // If the response already contains results, use them directly
+          if (projectResponse?.results && Array.isArray(projectResponse.results) && projectResponse.results.length > 0) {
+            finalResults = projectResponse.results;
+          }
+        } catch (processError) {
+          // Network timeout or 504 Gateway Timeout — the backend may still be processing.
+          // Large multi-PDF projects can take several minutes, exceeding the ALB timeout.
+          // Fall through to polling — results will be saved to DB when backend finishes.
+          console.warn("processProject request failed (likely timeout for large files), will poll for results:", processError);
+        }
 
-        // Poll project-level results
+        // Poll project-level results (skip if we already have results from the response)
         const MAX_POLL_ATTEMPTS = 3600;
         let pollAttempts = 0;
 
-        while (pollAttempts < MAX_POLL_ATTEMPTS) {
+        while (!finalResults && pollAttempts < MAX_POLL_ATTEMPTS) {
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           let statusData: any;

@@ -40,6 +40,9 @@ resource "aws_lb" "main" {
   subnets            = var.public_subnet_ids
 
   enable_deletion_protection = var.environment == "prod"
+
+  # Allow long-running requests (PDF processing can take several minutes)
+  idle_timeout = 300
 }
 
 resource "aws_lb_target_group" "web" {
