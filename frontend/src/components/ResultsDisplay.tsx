@@ -2746,9 +2746,11 @@ export const ResultsDisplay = ({
                         <button
                           onClick={async () => {
                             // Build structured reference using the new utility
+                            // Pass selectedPdfIndex so "Page X" refs (no filename) use the active tab
                             const ref = buildStructuredReference(
                               { reference: pair.reference, bbox: pair.bbox },
-                              pdfUrls.map(pdf => ({ name: pdf.name, url: pdf.url }))
+                              pdfUrls.map(pdf => ({ name: pdf.name, url: pdf.url })),
+                              selectedPdfIndex
                             );
                             
                             if (!ref) {
