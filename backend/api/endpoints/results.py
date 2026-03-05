@@ -88,8 +88,19 @@ async def get_project_results(
     )
     docs = (await db.execute(doc_stmt)).scalars().all()
 
-    # Determine overall status from all documents
-    statuses = [d.status for d in docs]
+    # Determine overall status — only consider the LATEST batch of documents.
+    # When users retry uploads, old docs accumulate with stale 'error' status
+    # that would poison the overall status. Focus on the most recent upload batch.
+    if docs:
+        latest_created = max(d.created_at for d in docs)
+        # Docs within 60s of the latest are considered part of the same batch
+        from datetime import timedelta
+        batch_cutoff = latest_created - timedelta(seconds=60)
+        active_docs = [d for d in docs if d.created_at >= batch_cutoff]
+    else:
+        active_docs = []
+
+    statuses = [d.status for d in active_docs] if active_docs else [d.status for d in docs]
     if all(s == "complete" for s in statuses):
         overall_status = "complete"
     elif any(s in ("failed", "error") for s in statuses):

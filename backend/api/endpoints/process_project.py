@@ -75,15 +75,21 @@ async def process_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Build text map from request documents
+    # Build text map from request documents (only the ones being processed NOW)
     doc_texts = {}  # document_id (str) -> extracted_text
+    request_doc_ids = set()
     for doc_input in req.documents:
         doc_texts[doc_input.document_id] = doc_input.extracted_text
+        request_doc_ids.add(doc_input.document_id)
 
-    # Fetch ALL documents in this project (handles "add second PDF later" scenario)
+    # Fetch only the documents from this request (not stale docs from prior attempts).
+    # This prevents accumulated retries from ballooning combined text and processing time.
     all_docs_stmt = (
         select(DocumentProcessing)
-        .where(DocumentProcessing.project_id == uuid.UUID(req.project_id))
+        .where(
+            DocumentProcessing.project_id == uuid.UUID(req.project_id),
+            DocumentProcessing.id.in_([uuid.UUID(d) for d in request_doc_ids]),
+        )
         .order_by(DocumentProcessing.created_at.asc())
     )
     all_docs = (await db.execute(all_docs_stmt)).scalars().all()
@@ -93,12 +99,6 @@ async def process_project(
             status_code=400,
             detail="No documents found for this project",
         )
-
-    # For existing docs not in the request, use stored extracted_text from DB
-    for doc in all_docs:
-        doc_id_str = str(doc.id)
-        if doc_id_str not in doc_texts and doc.extracted_text:
-            doc_texts[doc_id_str] = doc.extracted_text
 
     if not doc_texts:
         raise HTTPException(
@@ -118,7 +118,7 @@ async def process_project(
     # session.rollback() → statuses revert → frontend sees stale 'error' status.
     await db.commit()
 
-    # Combine all text with file separators
+    # Combine text from only the current request documents
     combined_parts = []
     for doc in all_docs:
         doc_id_str = str(doc.id)
