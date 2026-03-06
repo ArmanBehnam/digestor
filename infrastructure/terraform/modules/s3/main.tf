@@ -1,7 +1,7 @@
 variable "environment" { type = string }
 
 locals {
-  bucket_name = var.environment == "prod" ? "digestor-unified-storage" : "digestor-dev-storage"
+  bucket_name = var.environment == "prod" ? "digestor-unified-uploads-prod" : "digestor-unified-uploads-dev"
 }
 
 resource "aws_s3_bucket" "main" {
