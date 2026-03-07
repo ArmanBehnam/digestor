@@ -94,7 +94,7 @@ async def get_project_results(
         overall_status = "complete"
     elif any(s in ("failed", "error") for s in statuses):
         overall_status = "error"
-    elif any(s in ("llm_processing", "queued", "ocr_processing") for s in statuses):
+    elif any(s in ("llm_processing", "queued", "ocr_processing", "vlm_processing") for s in statuses):
         overall_status = "processing"
     else:
         overall_status = statuses[0] if statuses else "unknown"

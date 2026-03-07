@@ -7,6 +7,8 @@ This avoids per-document FallbackDetector failures when complementary PDFs
 together have enough information (e.g., PDF #1 has wind loads, PDF #2 has seismic).
 """
 
+import os
+import re
 import uuid
 import time
 import structlog
@@ -47,6 +49,146 @@ def _calc_avg_confidence(results: list) -> float:
             if conf and conf > 0:
                 confidences.append(conf)
     return sum(confidences) / len(confidences) if confidences else 0
+
+
+async def _enrich_tier1_with_bboxes(results: list, docs: list) -> list:
+    """Run Textract OCR on only the pages where answers were found to get bounding boxes.
+
+    This is used for Tier 1 (PDF.js) results which lack coordinate data.
+    We run a lightweight OCR pass on just the answer pages, then use
+    CoordinateMapper to match answer text to real OCR bounding boxes.
+    """
+    import asyncio
+    import boto3
+    import fitz
+    import io
+    from llm.coordinate_mapper import CoordinateMapper
+
+    # 1. Collect unique answer pages per document
+    answer_pages = set()
+    for r in results:
+        for pair in r.get("pairs", []):
+            ref = pair.get("reference", "")
+            m = re.search(r'Page\s+(\d+)', ref, re.IGNORECASE)
+            if m:
+                answer_pages.add(int(m.group(1)))
+
+    if not answer_pages:
+        return results
+
+    logger.info("tier1_bbox_enrichment_start", answer_pages=sorted(answer_pages))
+
+    # 2. Download PDF and extract answer page images, run Textract
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'),
+    )
+    textract = boto3.client(
+        'textract',
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'),
+    )
+    bucket = os.getenv('S3_BUCKET', os.getenv('AWS_S3_BUCKET', ''))
+
+    # Build page-level OCR results for coordinate mapping
+    page_results = []
+
+    for doc in docs:
+        if not doc.s3_key:
+            continue
+        try:
+            # Download PDF from S3
+            response = s3.get_object(Bucket=bucket, Key=doc.s3_key)
+            pdf_bytes = response['Body'].read()
+            pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+            for page_num in sorted(answer_pages):
+                if page_num < 1 or page_num > len(pdf_doc):
+                    continue
+
+                # Render page to image
+                page = pdf_doc[page_num - 1]
+                pix = page.get_pixmap(dpi=150)
+                img_bytes = pix.tobytes("png")
+
+                if len(img_bytes) > 10 * 1024 * 1024:
+                    continue  # Skip oversized pages
+
+                # Call Textract
+                try:
+                    textract_response = textract.detect_document_text(
+                        Document={'Bytes': img_bytes}
+                    )
+                except Exception as te:
+                    logger.warning("textract_page_failed", page=page_num, error=str(te))
+                    continue
+
+                # Extract text elements with bboxes
+                text_elements = []
+                full_text_parts = []
+                for block in textract_response.get('Blocks', []):
+                    if block['BlockType'] == 'WORD':
+                        bbox_data = block['Geometry']['BoundingBox']
+                        text_elements.append({
+                            "text": block['Text'],
+                            "confidence": block['Confidence'] / 100.0,
+                            "bbox": {
+                                "x": int(bbox_data['Left'] * pix.width),
+                                "y": int(bbox_data['Top'] * pix.height),
+                                "width": int(bbox_data['Width'] * pix.width),
+                                "height": int(bbox_data['Height'] * pix.height),
+                            },
+                        })
+                    elif block['BlockType'] == 'LINE':
+                        full_text_parts.append(block.get('Text', ''))
+
+                page_results.append({
+                    "page_number": page_num,
+                    "extracted_text": "\n".join(full_text_parts),
+                    "text_elements": text_elements,
+                    "page_width": pix.width,
+                    "page_height": pix.height,
+                })
+
+            pdf_doc.close()
+        except Exception as e:
+            logger.warning("tier1_pdf_ocr_failed", s3_key=doc.s3_key, error=str(e))
+            continue
+
+    if not page_results:
+        return results
+
+    # 3. Use CoordinateMapper to match answers to bboxes
+    mapper = CoordinateMapper()
+    enriched_count = 0
+
+    for r in results:
+        for pair in r.get("pairs", []):
+            answer = pair.get("answer", "")
+            ref = pair.get("reference", "")
+            m = re.search(r'Page\s+(\d+)', ref, re.IGNORECASE)
+            page_num = int(m.group(1)) if m else None
+
+            coord = mapper.find_answer_coordinates(answer, page_results, page_num)
+            if coord:
+                bbox = coord["bounding_box"]
+                pg = next((p for p in page_results
+                           if p.get("page_number") == page_num), None)
+                pw = pg.get("page_width", 1000) if pg else 1000
+                ph = pg.get("page_height", 1000) if pg else 1000
+                pair["bbox"] = {
+                    "x": round(bbox["x"] / pw, 4),
+                    "y": round(bbox["y"] / ph, 4),
+                    "width": round(bbox["width"] / pw, 4),
+                    "height": round(bbox["height"] / ph, 4),
+                }
+                enriched_count += 1
+
+    logger.info("tier1_bbox_enrichment_complete", enriched=enriched_count)
+    return results
 
 
 @router.post("/process-project")
@@ -176,24 +318,39 @@ async def process_project(
     processing_time = int((time.time() - start_time) * 1000)
     avg_confidence = _calc_avg_confidence(pdfjs_results)
 
-    # Save combined results to Project.pending_snapshot_json
-    project.pending_snapshot_json = pdfjs_results
-    flag_modified(project, "pending_snapshot_json")
+    # Save results based on whether fallback is needed
+    if not should_fallback:
+        # Tier 1 won — enrich with bounding boxes before saving
+        try:
+            pdfjs_results = await _enrich_tier1_with_bboxes(pdfjs_results, all_docs)
+        except Exception as e:
+            logger.warning("tier1_bbox_enrichment_failed", error=str(e))
+            # Non-fatal — results still valid without bboxes
 
-    # Save combined results to each DocumentProcessing record
-    for doc in all_docs:
-        doc.results = pdfjs_results
-        doc.confidence_avg = avg_confidence
-        doc.processing_time_ms = processing_time
-        doc.processing_path = "pdfjs"
-        doc.status = "complete"
-        if should_fallback:
+        # Save results for user
+        project.pending_snapshot_json = pdfjs_results
+        flag_modified(project, "pending_snapshot_json")
+        for doc in all_docs:
+            doc.results = pdfjs_results
+            doc.confidence_avg = avg_confidence
+            doc.processing_time_ms = processing_time
+            doc.processing_path = "pdfjs"
+            doc.processing_tier = 1
+            doc.status = "complete"
+            flag_modified(doc, "results")
+    else:
+        # Fallback needed — do NOT save results to user-visible fields.
+        # User stays in "Processing..." state until OCR/VLM tier completes.
+        for doc in all_docs:
+            doc.confidence_avg = avg_confidence
+            doc.processing_time_ms = processing_time
+            doc.processing_path = "aws"
+            doc.status = "queued"
             doc.fallback_reason = fallback_reason
-        flag_modified(doc, "results")
 
     await db.flush()
 
-    # Handle fallback — enqueue AWS in background
+    # Handle fallback — enqueue AWS for OCR processing
     if should_fallback:
         logger.info(
             "project_combined_fallback_to_aws",
@@ -211,6 +368,17 @@ async def process_project(
                 project_id=req.project_id,
                 error=str(e),
             )
+            # AWS enqueue failed — show Tier 1 results as best effort
+            # so the user isn't stuck in "Processing..." forever
+            project.pending_snapshot_json = pdfjs_results
+            flag_modified(project, "pending_snapshot_json")
+            for doc in all_docs:
+                doc.results = pdfjs_results
+                doc.status = "complete"
+                doc.processing_path = "pdfjs"
+                doc.processing_tier = 1
+                flag_modified(doc, "results")
+            await db.flush()
 
     # Log analytics
     try:

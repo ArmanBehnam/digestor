@@ -28,6 +28,20 @@ class CoordinateMapper:
             if page_number and page_data.get('page_number') != page_number:
                 continue
 
+            # Try OCR element-level matching first (real bboxes from Textract)
+            text_elements = page_data.get('text_elements', [])
+            if text_elements:
+                elem_bbox = self._find_in_ocr_elements(clean_answer, text_elements)
+                if elem_bbox:
+                    return {
+                        'page_number': page_data.get('page_number', 1),
+                        'bounding_box': elem_bbox,
+                        'matched_text': clean_answer,
+                        'match_type': 'ocr_element',
+                        'confidence_score': 100.0,
+                    }
+
+            # Fall back to text-position estimation
             page_text = page_data.get('extracted_text', '')
             if not page_text:
                 continue
@@ -44,6 +58,68 @@ class CoordinateMapper:
                 best_score = fuzzy_match['confidence_score']
 
         return best_match if best_score >= self.similarity_threshold else None
+
+    def _find_in_ocr_elements(self, answer_text: str, text_elements: List[Dict]) -> Optional[Dict]:
+        """Match answer text against OCR elements with real bounding boxes.
+        Returns a merged bbox encompassing all matching elements."""
+        if not text_elements or not answer_text:
+            return None
+
+        answer_lower = answer_text.lower().strip()
+        answer_words = answer_lower.split()
+
+        # Strategy 1: Find consecutive elements whose concatenated text contains the answer
+        matching_elements = []
+        for i, elem in enumerate(text_elements):
+            elem_text = elem.get("text", "").strip()
+            if not elem_text or not elem.get("bbox"):
+                continue
+
+            # Check if this element's text is part of the answer
+            if elem_text.lower() in answer_lower:
+                matching_elements.append(elem)
+            elif answer_lower in elem_text.lower():
+                # The answer is contained within this single element
+                return elem["bbox"].copy() if isinstance(elem["bbox"], dict) else None
+
+        # Strategy 2: Sliding window over elements, fuzzy-match concatenated text
+        if not matching_elements and len(answer_words) <= 10:
+            for window_size in range(1, min(len(text_elements), len(answer_words) + 3)):
+                for i in range(len(text_elements) - window_size + 1):
+                    window_elems = text_elements[i:i + window_size]
+                    window_text = " ".join(e.get("text", "") for e in window_elems).strip()
+                    if not window_text:
+                        continue
+                    ratio = fuzz.ratio(answer_lower, window_text.lower())
+                    if ratio >= self.similarity_threshold:
+                        valid = [e for e in window_elems if e.get("bbox")]
+                        if valid:
+                            matching_elements = valid
+                            break
+                if matching_elements:
+                    break
+
+        if not matching_elements:
+            return None
+
+        # Filter elements that have valid bbox data
+        valid_elements = [e for e in matching_elements
+                          if e.get("bbox") and isinstance(e["bbox"], dict)]
+        if not valid_elements:
+            return None
+
+        # Merge bounding boxes into one encompassing rectangle
+        min_x = min(e["bbox"]["x"] for e in valid_elements)
+        min_y = min(e["bbox"]["y"] for e in valid_elements)
+        max_x = max(e["bbox"]["x"] + e["bbox"].get("width", 0) for e in valid_elements)
+        max_y = max(e["bbox"]["y"] + e["bbox"].get("height", 0) for e in valid_elements)
+
+        return {
+            "x": min_x,
+            "y": min_y,
+            "width": max_x - min_x,
+            "height": max_y - min_y,
+        }
 
     def _clean_text_for_matching(self, text: str) -> str:
         if not text:

@@ -19,7 +19,8 @@
         { "name": "REDIS_URL", "value": "REDIS_URL_PLACEHOLDER" },
         { "name": "OPENAI_API_KEY", "value": "OPENAI_API_KEY_PLACEHOLDER" },
         { "name": "AZURE_API_KEY", "value": "AZURE_API_KEY_PLACEHOLDER" },
-        { "name": "AZURE_ENDPOINT", "value": "AZURE_ENDPOINT_PLACEHOLDER" }
+        { "name": "AZURE_ENDPOINT", "value": "AZURE_ENDPOINT_PLACEHOLDER" },
+        { "name": "GEMINI_API_KEY", "value": "GEMINI_API_KEY_PLACEHOLDER" }
       ],
       "mountPoints": [],
       "volumesFrom": [],

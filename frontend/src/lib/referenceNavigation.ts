@@ -99,60 +99,86 @@ export function findFileIndex(
  * Uses structured bbox if available, falls back to parsing reference string
  */
 export function buildStructuredReference(
-  pair: { 
-    reference: string; 
+  pair: {
+    reference: string;
     bbox?: { x: number; y: number; width: number; height: number };
   },
-  files: PDFFile[]
+  files: PDFFile[],
+  defaultFileIndex?: number
 ): StructuredReference | null {
   if (!pair.reference || pair.reference === 'Not Found' || pair.reference === 'Not Available') {
     return null;
   }
-  
+
   const page = parseReferencePage(pair.reference);
+  if (!page) return null;
+
   const fileName = parseReferenceFilename(pair.reference);
-  
-  if (!page || !fileName) return null;
-  
-  const fileIndex = findFileIndex(fileName, files);
-  if (fileIndex === -1) return null;
-  
-  return {
-    fileIndex,
-    fileName: files[fileIndex].name,
-    page,
-    bbox: pair.bbox, // Use structured bbox directly - no parsing needed
-  };
+  if (fileName) {
+    const fileIndex = findFileIndex(fileName, files);
+    if (fileIndex === -1) return null;
+    return {
+      fileIndex,
+      fileName: files[fileIndex].name,
+      page,
+      bbox: pair.bbox,
+    };
+  }
+
+  // No filename in reference (e.g. "Page 3") — use default file index
+  const fallbackIndex = files.length === 1 ? 0 : (defaultFileIndex ?? 0);
+  if (fallbackIndex >= 0 && fallbackIndex < files.length) {
+    return {
+      fileIndex: fallbackIndex,
+      fileName: files[fallbackIndex].name,
+      page,
+      bbox: pair.bbox,
+    };
+  }
+  return null;
 }
 
 /**
  * Build a structured reference from a row in the snapshot (approved projects)
  */
 export function buildStructuredReferenceFromRow(
-  row: { 
-    reference: string; 
+  row: {
+    reference: string;
     reference_metadata?: { x: number; y: number; width: number; height: number };
   },
-  files: PDFFile[]
+  files: PDFFile[],
+  defaultFileIndex?: number
 ): StructuredReference | null {
   if (!row.reference || row.reference === 'Not Found' || row.reference === 'Not Available') {
     return null;
   }
-  
+
   const page = parseReferencePage(row.reference);
+  if (!page) return null;
+
   const fileName = parseReferenceFilename(row.reference);
-  
-  if (!page || !fileName) return null;
-  
-  const fileIndex = findFileIndex(fileName, files);
-  if (fileIndex === -1) return null;
-  
-  return {
-    fileIndex,
-    fileName: files[fileIndex].name,
-    page,
-    bbox: row.reference_metadata,
-  };
+  if (fileName) {
+    const fileIndex = findFileIndex(fileName, files);
+    if (fileIndex === -1) return null;
+    return {
+      fileIndex,
+      fileName: files[fileIndex].name,
+      page,
+      bbox: row.reference_metadata,
+    };
+  }
+
+  // No filename in reference — use default file index
+  const fallbackIndex = files.length === 1 ? 0 : (defaultFileIndex ?? 0);
+  if (fallbackIndex >= 0 && fallbackIndex < files.length) {
+    return {
+      fileIndex: fallbackIndex,
+      fileName: files[fallbackIndex].name,
+      page,
+      bbox: row.reference_metadata,
+    };
+  }
+  return null;
 }
 
 /**

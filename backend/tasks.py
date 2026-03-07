@@ -16,8 +16,36 @@ from PIL import Image
 import io
 
 
-def update_document_status(document_id, status, results=None, confidence_avg=None, processing_time_ms=None):
-    """Update DocumentProcessing record in RDS (synchronous, for worker use)."""
+def _get_fallback_status(document_id):
+    """Check if a document already has PDF.js results saved (fallback path).
+    If it does, return 'complete' so those results are shown instead of an error.
+    Otherwise return 'failed'."""
+    if not document_id:
+        return "failed"
+    db_url = os.getenv('DATABASE_URL', '')
+    if not db_url:
+        return "failed"
+    sync_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
+    try:
+        import psycopg2
+        conn = psycopg2.connect(sync_url)
+        cur = conn.cursor()
+        cur.execute("SELECT results FROM document_processing WHERE id = %s", (document_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row and row[0]:
+            print(f"[DB] Document {document_id} has existing results, reverting to 'complete'")
+            return "complete"
+    except Exception as e:
+        print(f"[DB] Failed to check fallback status: {e}")
+    return "failed"
+
+
+def update_document_status(document_id, status, results=None, confidence_avg=None,
+                           processing_time_ms=None, processing_tier=None, project_id=None):
+    """Update DocumentProcessing record in RDS (synchronous, for worker use).
+    Also updates project.pending_snapshot_json when results are final."""
     if not document_id:
         print("[DB] No document_id provided, skipping DB status update")
         return
@@ -35,10 +63,23 @@ def update_document_status(document_id, status, results=None, confidence_avg=Non
         if results is not None:
             cur.execute(
                 """UPDATE document_processing
-                   SET status = %s, results = %s, confidence_avg = %s, processing_time_ms = %s
+                   SET status = %s, results = %s, confidence_avg = %s,
+                       processing_time_ms = %s, processing_tier = %s
                    WHERE id = %s""",
-                (status, psycopg2.extras.Json(results), confidence_avg, processing_time_ms, document_id)
+                (status, psycopg2.extras.Json(results), confidence_avg,
+                 processing_time_ms, processing_tier, document_id)
             )
+            # Also update project snapshot so frontend picks up results
+            if project_id and status == "complete":
+                try:
+                    cur.execute(
+                        """UPDATE projects SET pending_snapshot_json = %s
+                           WHERE id = %s""",
+                        (psycopg2.extras.Json(results), project_id)
+                    )
+                    print(f"[DB] Updated project {project_id} snapshot with final results")
+                except Exception as pe:
+                    print(f"[DB] Failed to update project snapshot: {pe}")
         else:
             cur.execute(
                 "UPDATE document_processing SET status = %s WHERE id = %s",
@@ -47,7 +88,8 @@ def update_document_status(document_id, status, results=None, confidence_avg=Non
         conn.commit()
         cur.close()
         conn.close()
-        print(f"[DB] Updated document {document_id} status to '{status}'")
+        print(f"[DB] Updated document {document_id} status to '{status}'"
+              + (f" (tier {processing_tier})" if processing_tier else ""))
     except Exception as e:
         print(f"[DB] Failed to update document status: {e}")
 
@@ -132,6 +174,83 @@ def update_progress(redis_conn, job_id, stage, progress, step_description):
     redis_conn.rpush(log_key, f"[{stage.upper()}] {step_description}")
     redis_conn.expire(log_key, 3600)
     print(f"[PROGRESS] {progress}% - {step_description}")
+
+
+def run_vlm_processing(file_keys, bucket, missing_questions, s3_client, work_dir):
+    """Tier 3: Convert PDF pages to images, send to Gemini VLM with missing questions only."""
+    from llm.vlm_engine import VLMEngine
+
+    vlm = VLMEngine()
+    if not vlm.is_available:
+        raise RuntimeError("VLM engine not available (no GOOGLE_API_KEY)")
+
+    # Convert all PDF pages to images
+    page_images = []
+    for key in file_keys:
+        local_path = f"{work_dir}/{Path(key).name}"
+        if not Path(local_path).exists():
+            s3_client.download_file(bucket, key, local_path)
+
+        doc = fitz.open(local_path)
+        for page_num in range(len(doc)):
+            pix = doc[page_num].get_pixmap(dpi=150)
+            page_images.append({
+                "page_number": page_num + 1,
+                "image_bytes": pix.tobytes("png"),
+                "width": pix.width,
+                "height": pix.height,
+            })
+        doc.close()
+
+    print(f"[VLM] Sending {len(page_images)} page images + {len(missing_questions)} questions to Gemini")
+    return vlm.answer_questions_from_images(page_images, missing_questions)
+
+
+def enrich_with_bboxes(analysis_results, all_ocr_results):
+    """Map answer text to OCR bounding boxes, normalize coordinates to 0-1 range."""
+    # Build flat list of page_results from all OCR data
+    page_results = []
+    for ocr in all_ocr_results:
+        ocr_data = ocr.get("ocr_data", {})
+        for page in ocr_data.get("page_results", []):
+            page_results.append(page)
+
+    if not page_results:
+        return analysis_results
+
+    from llm.coordinate_mapper import CoordinateMapper
+    mapper = CoordinateMapper()
+
+    enriched_count = 0
+    for r in analysis_results:
+        for pair in r.get("pairs", []):
+            if pair.get("bbox"):  # Already has bbox (e.g., from VLM)
+                continue
+            answer = pair.get("answer", "")
+            ref = pair.get("reference", "")
+
+            # Parse page number from reference
+            match = re.search(r'Page\s+(\d+)', ref, re.IGNORECASE)
+            page_num = int(match.group(1)) if match else None
+
+            coord = mapper.find_answer_coordinates(answer, page_results, page_num)
+            if coord:
+                bbox = coord["bounding_box"]
+                # Get page dimensions for normalization
+                pg = next((p for p in page_results
+                           if p.get("page_number") == page_num), None)
+                pw = pg.get("page_width", 1000) if pg else 1000
+                ph = pg.get("page_height", 1000) if pg else 1000
+                pair["bbox"] = {
+                    "x": round(bbox["x"] / pw, 4),
+                    "y": round(bbox["y"] / ph, 4),
+                    "width": round(bbox["width"] / pw, 4),
+                    "height": round(bbox["height"] / ph, 4),
+                }
+                enriched_count += 1
+
+    print(f"[BBOX] Enriched {enriched_count} answers with bounding box coordinates")
+    return analysis_results
 
 
 def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
@@ -381,6 +500,63 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
             except Exception as conv_err:
                 print(f"[DB] Warning: Could not convert results for DB: {conv_err}")
 
+        # --- TIER 2 QUALITY CHECK: Should we escalate to VLM (Tier 3)? ---
+        processing_tier = 2
+        if analysis_results:
+            from services.fallback_detector import FallbackDetector, NOT_FOUND_THRESHOLD
+            tier2_detector = FallbackDetector()
+            tier2_answers = tier2_detector._extract_answers(analysis_results)
+            tier2_not_found = sum(1 for a in tier2_answers if tier2_detector._is_not_found(a["answer"]))
+            print(f"[TIER2] Quality check: {tier2_not_found} answers missing (threshold: {NOT_FOUND_THRESHOLD})")
+
+            if tier2_not_found > NOT_FOUND_THRESHOLD:
+                # Identify which questions are still missing
+                missing_questions = []
+                for i, r in enumerate(analysis_results):
+                    if r.get("pairs") and tier2_detector._is_not_found(r["pairs"][0].get("answer", "")):
+                        missing_questions.append({
+                            "index": i,
+                            "category": r["category"],
+                            "question": r["question"],
+                        })
+
+                update_progress(redis_conn, job_id, "vlm", 85,
+                                f"Running VLM on {len(missing_questions)} unanswered questions")
+                print(f"\n[TIER3] Escalating to VLM: {len(missing_questions)} missing questions")
+
+                # --- TIER 3: VLM PROCESSING ---
+                try:
+                    vlm_answers = run_vlm_processing(
+                        file_keys, bucket, missing_questions, s3, work_dir
+                    )
+                    # Merge VLM answers into analysis_results
+                    vlm_filled = 0
+                    for va in vlm_answers:
+                        idx = va["index"]
+                        if idx < len(analysis_results) and analysis_results[idx].get("pairs"):
+                            analysis_results[idx]["pairs"][0]["answer"] = va["answer"]
+                            analysis_results[idx]["pairs"][0]["confidence"] = va["confidence"]
+                            analysis_results[idx]["pairs"][0]["reference"] = va.get("reference", "Not Found")
+                            if va.get("bbox"):
+                                analysis_results[idx]["pairs"][0]["bbox"] = va["bbox"]
+                            vlm_filled += 1
+                    processing_tier = 3
+                    print(f"[TIER3] VLM filled {vlm_filled}/{len(missing_questions)} missing answers")
+                except Exception as vlm_err:
+                    print(f"[TIER3] VLM failed, keeping Tier 2 results: {vlm_err}")
+                    import traceback
+                    traceback.print_exc()
+
+        # --- BBOX COORDINATE MAPPING ---
+        if analysis_results and all_ocr_results:
+            analysis_results = enrich_with_bboxes(analysis_results, all_ocr_results)
+
+        # Recalculate confidence after potential VLM merge
+        if analysis_results:
+            confs = [p['pairs'][0]['confidence'] for p in analysis_results
+                     if p.get('pairs') and p['pairs'][0].get('confidence')]
+            avg_confidence = sum(confs) / len(confs) if confs else avg_confidence
+
         for f in Path(work_dir).glob("*"):
             try:
                 f.unlink()
@@ -389,7 +565,11 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
         gc.collect()
         update_progress(redis_conn, job_id, "complete", 100, "Processing complete!")
         # Update RDS document status to 'complete' with results
-        update_document_status(document_id, "complete", results=analysis_results or None, confidence_avg=avg_confidence)
+        update_document_status(document_id, "complete",
+                               results=analysis_results or None,
+                               confidence_avg=avg_confidence,
+                               processing_tier=processing_tier,
+                               project_id=project_id)
         return {'success': True, 'batches_processed': len(all_ocr_results), 'bucket': bucket, 'project_id': project_id,
                 **uploaded_files}
     except Exception as e:
@@ -397,8 +577,11 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
         print(f"Error: {str(e)}")
         import traceback
         traceback.print_exc()
-        # Update RDS document status to 'failed'
-        update_document_status(document_id, "failed")
+        # Update RDS document status
+        # If the document already has PDF.js results (fallback path), revert to
+        # "complete" so the user still sees those results rather than an error
+        fallback_status = _get_fallback_status(document_id)
+        update_document_status(document_id, fallback_status)
         return {'success': False, 'error': str(e)}
 
 

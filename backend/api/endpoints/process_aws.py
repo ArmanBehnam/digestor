@@ -84,11 +84,8 @@ async def enqueue_aws_processing(
     )
 
     doc.job_id = job.id
-    # Only change status to "queued" if not already complete with results
-    # (when called from fallback path, results are already saved)
-    if doc.status != "complete":
-        doc.status = "queued"
-        doc.processing_path = "aws"
+    doc.status = "queued"
+    doc.processing_path = "aws"
     await db.flush()
 
     logger.info(

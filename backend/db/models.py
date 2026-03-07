@@ -98,6 +98,7 @@ class DocumentProcessing(Base):
     job_id = Column(String(255), nullable=True, index=True)
     results = Column(JSONB, nullable=True)  # Final extracted Q&A results
     confidence_avg = Column(Float, nullable=True)
+    processing_tier = Column(Integer, nullable=True)  # 1=pdfjs, 2=ocr, 3=vlm
     fallback_reason = Column(Text, nullable=True)  # Why AWS fallback was triggered
     processing_time_ms = Column(Integer, nullable=True)
     extracted_text = Column(Text, nullable=True)  # Browser-extracted text stored for combined multi-PDF processing

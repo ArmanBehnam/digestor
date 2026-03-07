@@ -184,7 +184,21 @@ const extractUnit = (answer: string, questionId: number): string => {
   return "";
 };
 
+// Simple string hash fallback for non-secure contexts (HTTP)
+const simpleHash = (str: string): string => {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return ((h2 >>> 0) * 0x100000000 + (h1 >>> 0)).toString(16).padStart(16, "0");
+};
+
 // Compute project hash from project name and files using SHA-256
+// Falls back to a simple deterministic hash on HTTP (crypto.subtle requires HTTPS)
 const computeProjectHash = async (projectName: string, files: File[]): Promise<string> => {
   const fileMetadata = files
     .map((f) => `${f.name}:${f.size}`)
@@ -192,11 +206,15 @@ const computeProjectHash = async (projectName: string, files: File[]): Promise<s
     .join("|");
   const combined = `${projectName.trim().toLowerCase()}|${fileMetadata}`;
 
-  const encoder = new TextEncoder();
-  const data = encoder.encode(combined);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.slice(0, 8).map(b => b.toString(16).padStart(2, "0")).join("");
+  if (crypto.subtle) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(combined);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.slice(0, 8).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  // Fallback for HTTP (non-secure context)
+  return simpleHash(combined);
 };
 
 const Index = () => {

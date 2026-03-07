@@ -53,9 +53,14 @@ class ApiClient {
       headers,
     });
 
-    // Handle 401 or 403 — try token refresh
-    // HTTPBearer returns 403 when no token is present, 401 when token is invalid/expired
-    if (response.status === 401 || response.status === 403) {
+    // Handle 401 or 403 — try token refresh (skip for auth endpoints)
+    const isAuthEndpoint = endpoint.startsWith('/auth/login')
+      || endpoint.startsWith('/auth/register')
+      || endpoint.startsWith('/auth/reset-password')
+      || endpoint.startsWith('/auth/confirm-reset')
+      || endpoint.startsWith('/auth/respond-challenge');
+
+    if ((response.status === 401 || response.status === 403) && !isAuthEndpoint) {
       const refreshed = await this.refreshToken();
       if (refreshed) {
         headers['Authorization'] = `Bearer ${this.getAuthToken()}`;
@@ -65,8 +70,11 @@ class ApiClient {
         }
         return retryResponse.json();
       }
-      // Refresh failed — redirect to login
-      window.location.href = '/login';
+      // Refresh failed — clear tokens and redirect to home (login form renders at /)
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('id_token');
+      localStorage.removeItem('refresh_token');
+      window.location.href = '/';
       throw new ApiError(401, 'Session expired');
     }
 

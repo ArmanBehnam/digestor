@@ -139,21 +139,21 @@ async def process_document(
                 doc_id=str(doc.id),
                 reason=reason,
             )
-            # Save PDF.js results immediately so the frontend can show them
-            # rather than waiting for the AWS worker (which doesn't update DB status)
+            # Save PDF.js results as fallback (in case AWS fails)
+            # but set status to "queued" so the frontend continues polling
+            # until the AWS OCR worker finishes with better results
             processing_time = int((time.time() - start_time) * 1000)
             avg_confidence = _calc_avg_confidence(pdfjs_results)
 
             doc.results = pdfjs_results
             doc.confidence_avg = avg_confidence
             doc.processing_time_ms = processing_time
-            doc.processing_path = "pdfjs"
+            doc.processing_path = "aws"
             doc.fallback_reason = reason
-            doc.status = "complete"
+            doc.status = "queued"
             await db.flush()
 
-            # Also enqueue AWS for background deep analysis (optional enhancement)
-            # The worker will update results when done, but frontend won't be stuck
+            # Enqueue AWS OCR processing — worker will update status to "complete"
             try:
                 from api.endpoints.process_aws import enqueue_aws_processing
                 job_id = await enqueue_aws_processing(doc, db)
@@ -161,6 +161,11 @@ async def process_document(
                 await db.flush()
             except Exception as e:
                 logger.warning("aws_enqueue_failed", doc_id=str(doc.id), error=str(e))
+                # AWS enqueue failed — revert to "complete" with PDF.js results
+                # so the user still sees something rather than being stuck
+                doc.status = "complete"
+                doc.processing_path = "pdfjs"
+                await db.flush()
                 job_id = None
 
             logger.info(
@@ -172,12 +177,10 @@ async def process_document(
 
             return {
                 "document_id": str(doc.id),
-                "processing_path": "pdfjs",
-                "results": pdfjs_results,
-                "confidence_avg": avg_confidence,
-                "processing_time_ms": processing_time,
+                "processing_path": "aws",
+                "job_id": job_id,
                 "fallback_reason": reason,
-                "message": f"Processing complete (note: {reason})",
+                "message": f"PDF.js quality insufficient ({reason}), deep analysis queued",
             }
 
     # --- PDF.js results are good enough ---

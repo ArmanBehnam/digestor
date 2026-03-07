@@ -1232,7 +1232,7 @@ async def submit_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if project.status not in ("draft", "completed", "rejected", "complete", "processing"):
+    if project.status not in ("draft", "completed", "rejected", "complete", "processing", "submitted"):
         raise HTTPException(
             status_code=400,
             detail=f"Cannot submit project with status: {project.status}",

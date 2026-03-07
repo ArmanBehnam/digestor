@@ -64,6 +64,7 @@ jobs:
           sed -i 's|OPENAI_API_KEY_PLACEHOLDER|${{ secrets.OPENAI_API_KEY }}|g' $WEB_TASKDEF
           sed -i 's|AZURE_API_KEY_PLACEHOLDER|${{ secrets.AZURE_API_KEY }}|g' $WEB_TASKDEF
           sed -i 's|AZURE_ENDPOINT_PLACEHOLDER|${{ secrets.AZURE_ENDPOINT }}|g' $WEB_TASKDEF
+          sed -i 's|GEMINI_API_KEY_PLACEHOLDER|${{ secrets.GEMINI_API_KEY }}|g' $WEB_TASKDEF
 
       - name: Prepare worker task definition
         run: |
@@ -73,6 +74,7 @@ jobs:
           sed -i 's|OPENAI_API_KEY_PLACEHOLDER|${{ secrets.OPENAI_API_KEY }}|g' $WORKER_TASKDEF
           sed -i 's|AZURE_API_KEY_PLACEHOLDER|${{ secrets.AZURE_API_KEY }}|g' $WORKER_TASKDEF
           sed -i 's|AZURE_ENDPOINT_PLACEHOLDER|${{ secrets.AZURE_ENDPOINT }}|g' $WORKER_TASKDEF
+          sed -i 's|GEMINI_API_KEY_PLACEHOLDER|${{ secrets.GEMINI_API_KEY }}|g' $WORKER_TASKDEF
 
       # --- Register and deploy web service ---
       - name: Register web task definition

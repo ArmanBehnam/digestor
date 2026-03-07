@@ -2748,7 +2748,8 @@ export const ResultsDisplay = ({
                             // Build structured reference using the new utility
                             const ref = buildStructuredReference(
                               { reference: pair.reference, bbox: pair.bbox },
-                              pdfUrls.map(pdf => ({ name: pdf.name, url: pdf.url }))
+                              pdfUrls.map(pdf => ({ name: pdf.name, url: pdf.url })),
+                              selectedPdfIndex
                             );
                             
                             if (!ref) {
