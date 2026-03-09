@@ -228,13 +228,33 @@ async def process_project(
         .where(DocumentProcessing.project_id == uuid.UUID(req.project_id))
         .order_by(DocumentProcessing.created_at.asc())
     )
-    all_docs = (await db.execute(all_docs_stmt)).scalars().all()
+    all_docs = list((await db.execute(all_docs_stmt)).scalars().all())
 
     if not all_docs:
         raise HTTPException(
             status_code=400,
             detail="No documents found for this project",
         )
+
+    # Deduplicate: keep only the LATEST document per filename
+    seen_filenames = {}  # filename -> latest doc
+    duplicates = []
+    for doc in all_docs:
+        if doc.file_name in seen_filenames:
+            duplicates.append(seen_filenames[doc.file_name])  # old one is the duplicate
+        seen_filenames[doc.file_name] = doc
+
+    if duplicates:
+        logger.info("deduplicating_documents",
+                     project_id=req.project_id,
+                     total=len(all_docs),
+                     duplicates=len(duplicates),
+                     keeping=len(seen_filenames))
+        for dup in duplicates:
+            await db.delete(dup)
+        await db.flush()
+        # Re-fetch clean list
+        all_docs = list(seen_filenames.values())
 
     # For existing docs not in the request, use stored extracted_text from DB
     for doc in all_docs:
@@ -247,6 +267,11 @@ async def process_project(
             status_code=400,
             detail="No extracted text available for any documents. Upload and extract text first.",
         )
+
+    # Clear stale project snapshot from previous runs so self-healing
+    # doesn't accidentally use old results for new documents
+    project.pending_snapshot_json = None
+    flag_modified(project, "pending_snapshot_json")
 
     # Save extracted_text to each DocumentProcessing record (for future re-processing)
     for doc in all_docs:
@@ -279,23 +304,21 @@ async def process_project(
         combined_text_len=len(combined_text),
     )
 
-    # --- DEEP MODE: Skip PDF.js, enqueue AWS for each document ---
+    # --- DEEP MODE: Skip PDF.js, enqueue ALL docs as single combined job ---
     if req.processing_mode == "deep":
-        from api.endpoints.process_aws import enqueue_aws_processing
+        from api.endpoints.process_aws import enqueue_aws_processing_combined
 
-        job_ids = []
-        for doc in all_docs:
-            job_id = await enqueue_aws_processing(doc, db)
-            doc.processing_path = "aws"
-            doc.status = "queued"
-            job_ids.append(job_id)
-        await db.flush()
+        all_s3_keys = [doc.s3_key for doc in all_docs if doc.s3_key]
+        primary_doc = all_docs[0]
+        job_id = await enqueue_aws_processing_combined(
+            all_s3_keys, primary_doc, all_docs, project, db
+        )
 
         return {
             "project_id": req.project_id,
             "processing_path": "aws",
-            "job_ids": job_ids,
-            "message": "Deep analysis queued for all documents",
+            "job_ids": [job_id],
+            "message": f"Deep analysis queued for {len(all_s3_keys)} documents (combined)",
         }
 
     # --- PDF.js Combined Processing ---
@@ -350,18 +373,34 @@ async def process_project(
 
     await db.flush()
 
-    # Handle fallback — enqueue AWS for OCR processing
+    # Handle fallback — enqueue ALL docs as a SINGLE combined worker job
+    # (not one job per doc, since answers span across documents)
     if should_fallback:
         logger.info(
             "project_combined_fallback_to_aws",
             project_id=req.project_id,
             reason=fallback_reason,
+            num_docs=len(all_docs),
         )
         try:
-            from api.endpoints.process_aws import enqueue_aws_processing
+            from api.endpoints.process_aws import enqueue_aws_processing_combined
 
-            for doc in all_docs:
-                await enqueue_aws_processing(doc, db)
+            # Collect all S3 keys and enqueue ONE job with all files
+            all_s3_keys = [doc.s3_key for doc in all_docs if doc.s3_key]
+            if all_s3_keys:
+                # Use the first document's ID as the "primary" doc for status tracking
+                primary_doc = all_docs[0]
+                job_id = await enqueue_aws_processing_combined(
+                    all_s3_keys, primary_doc, all_docs, project, db
+                )
+                logger.info(
+                    "aws_combined_job_enqueued",
+                    project_id=req.project_id,
+                    job_id=job_id,
+                    num_files=len(all_s3_keys),
+                )
+            else:
+                raise Exception("No S3 keys found for any documents")
         except Exception as e:
             logger.warning(
                 "aws_enqueue_failed",

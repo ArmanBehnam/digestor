@@ -45,7 +45,8 @@ def _get_fallback_status(document_id):
 def update_document_status(document_id, status, results=None, confidence_avg=None,
                            processing_time_ms=None, processing_tier=None, project_id=None):
     """Update DocumentProcessing record in RDS (synchronous, for worker use).
-    Also updates project.pending_snapshot_json when results are final."""
+    Also updates project.pending_snapshot_json and ALL project docs when results are final.
+    This handles combined multi-document jobs where one job processes all project PDFs."""
     if not document_id:
         print("[DB] No document_id provided, skipping DB status update")
         return
@@ -61,37 +62,69 @@ def update_document_status(document_id, status, results=None, confidence_avg=Non
         conn = psycopg2.connect(sync_url)
         cur = conn.cursor()
         if results is not None:
+            # Update the primary document
             cur.execute(
                 """UPDATE document_processing
                    SET status = %s, results = %s, confidence_avg = %s,
                        processing_time_ms = %s, processing_tier = %s
-                   WHERE id = %s""",
+                   WHERE id = %s::uuid""",
                 (status, psycopg2.extras.Json(results), confidence_avg,
                  processing_time_ms, processing_tier, document_id)
             )
-            # Also update project snapshot so frontend picks up results
+            print(f"[DB] Primary doc update: {cur.rowcount} row(s)")
+            # Commit primary update immediately so it's not lost
+            # if subsequent updates fail
+            conn.commit()
+
             if project_id and status == "complete":
+                results_json = psycopg2.extras.Json(results)
+                # Update project snapshot
                 try:
                     cur.execute(
                         """UPDATE projects SET pending_snapshot_json = %s
-                           WHERE id = %s""",
-                        (psycopg2.extras.Json(results), project_id)
+                           WHERE id = %s::uuid""",
+                        (results_json, project_id)
                     )
-                    print(f"[DB] Updated project {project_id} snapshot with final results")
+                    print(f"[DB] Project snapshot update: {cur.rowcount} row(s)")
+                    conn.commit()
                 except Exception as pe:
                     print(f"[DB] Failed to update project snapshot: {pe}")
+                    conn.rollback()
+
+                # Also update ALL other documents in this project to "complete"
+                # so the frontend doesn't show "processing" for the non-primary docs
+                try:
+                    cur.execute(
+                        """UPDATE document_processing
+                           SET status = %s, results = %s, confidence_avg = %s,
+                               processing_time_ms = %s, processing_tier = %s
+                           WHERE project_id = %s::uuid AND id != %s::uuid""",
+                        (status, results_json, confidence_avg,
+                         processing_time_ms, processing_tier, project_id, document_id)
+                    )
+                    updated = cur.rowcount
+                    print(f"[DB] Other project docs update: {updated} row(s) "
+                          f"(project={project_id}, excluding={document_id})")
+                    conn.commit()
+                    if updated == 0:
+                        print(f"[DB] WARNING: 0 other docs updated! Check project_id match.")
+                except Exception as pe:
+                    print(f"[DB] Failed to update other project documents: {pe}")
+                    conn.rollback()
         else:
             cur.execute(
-                "UPDATE document_processing SET status = %s WHERE id = %s",
+                "UPDATE document_processing SET status = %s WHERE id = %s::uuid",
                 (status, document_id)
             )
-        conn.commit()
+            conn.commit()
         cur.close()
         conn.close()
         print(f"[DB] Updated document {document_id} status to '{status}'"
               + (f" (tier {processing_tier})" if processing_tier else ""))
     except Exception as e:
         print(f"[DB] Failed to update document status: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 QUESTION_METADATA = [
@@ -145,17 +178,32 @@ def convert_worker_results_to_analysis_format(worker_results):
         worker_r = results_by_num.get(qnum, {})
 
         answer = worker_r.get("Main_Answer", "Not Found")
+        answer_str = str(answer).strip() if answer else "Not Found"
         confidence = worker_r.get("OCR_Confidence", 0)
         if isinstance(confidence, (int, float)) and confidence > 1:
             confidence = confidence / 100.0
         page = worker_r.get("Page", "N/A")
-        reference = f"Page {page}" if page and page != "N/A" else "Not Found"
+
+        # Fix reference mapping: if answer is "Not Found", reference should also be "Not Found"
+        # regardless of what page the LLM returned. Conversely, if we have a real answer,
+        # preserve the page reference.
+        answer_is_missing = answer_str.lower() in (
+            "not found", "n/a", "na", "none", "not specified",
+            "not available", "not provided", "unknown", "",
+        )
+        if answer_is_missing:
+            reference = "Not Found"
+            answer_str = "Not Found"
+        elif page and str(page) not in ("N/A", "n/a", "None", "none", "unknown", ""):
+            reference = f"Page {page}" if not str(page).startswith("Page") else str(page)
+        else:
+            reference = "Not Found"
 
         analysis_results.append({
             "category": meta["category"],
             "question": meta["question"],
             "pairs": [{
-                "answer": str(answer) if answer else "Not Found",
+                "answer": answer_str,
                 "reference": reference,
                 "confidence": float(confidence) if confidence else 0.0,
                 "feedback": "up",
@@ -357,9 +405,15 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
                 try:
                     ocr_result = asyncio.run(workflow.orchestrator.ocr_agent.safe_process(batch_path))
                     if ocr_result['success']:
+                        # Only keep essential data: page_results for merging
+                        slim_result = {
+                            'page_results': ocr_result.get('page_results', []),
+                            'success': True,
+                        }
                         pdf_batches.append({'batch_num': batch_num, 'pages': batch_start + 1, 'pages_end': batch_end,
-                                            'ocr_data': ocr_result,
-                                            'page_count': len(ocr_result.get('page_results', []))})
+                                            'ocr_data': slim_result,
+                                            'page_count': len(slim_result.get('page_results', []))})
+                        del ocr_result
                         print(f"Batch {batch_num} OCR complete")
                 except Exception as e:
                     print(f"Batch {batch_num} failed, skipping: {e}")
@@ -369,6 +423,14 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
                     except:
                         pass
                     gc.collect()
+                # Log memory every 5 batches for large PDFs
+                if batch_num % 5 == 0 or batch_num == total_batches:
+                    try:
+                        import psutil
+                        mem_mb = psutil.Process().memory_info().rss / 1024 / 1024
+                        print(f"Memory at batch {batch_num}/{total_batches}: {mem_mb:.1f} MB")
+                    except:
+                        pass
             if pdf_batches:
                 print(f"\nMerging {len(pdf_batches)} batches for {Path(key).name}")
                 merged_pdf_ocr = merge_batches_for_pdf(pdf_batches, Path(key).name)

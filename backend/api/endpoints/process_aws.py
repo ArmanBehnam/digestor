@@ -65,12 +65,11 @@ async def enqueue_aws_processing(
     db: AsyncSession,
 ) -> str:
     """
-    Enqueue a document for AWS pipeline processing (Textract + LLM + Validation).
+    Enqueue a single document for AWS pipeline processing.
     Returns the RQ job ID.
     """
     queue = _get_rq_queue()
 
-    # Enqueue the job — tasks.process_pdfs is the existing worker function
     job = queue.enqueue(
         "tasks.process_pdfs",
         kwargs={
@@ -93,6 +92,53 @@ async def enqueue_aws_processing(
         doc_id=str(doc.id),
         job_id=job.id,
         s3_key=doc.s3_key,
+    )
+
+    return job.id
+
+
+async def enqueue_aws_processing_combined(
+    all_s3_keys: list,
+    primary_doc: DocumentProcessing,
+    all_docs: list,
+    project,
+    db: AsyncSession,
+) -> str:
+    """
+    Enqueue ALL project documents as a SINGLE combined worker job.
+    This ensures the worker processes all PDFs together, merging OCR results
+    and answering questions from the combined content (same as Tier 1 approach).
+
+    Returns the RQ job ID.
+    """
+    queue = _get_rq_queue()
+
+    # Enqueue one job with ALL file keys
+    job = queue.enqueue(
+        "tasks.process_pdfs",
+        kwargs={
+            "file_keys": all_s3_keys,
+            "bucket": S3_BUCKET,
+            "project_id": str(primary_doc.project_id),
+            "document_id": str(primary_doc.id),
+        },
+        job_timeout=1800,  # 30 minutes max for multi-document processing
+        result_ttl=86400,
+    )
+
+    # Mark all documents as queued with the same job ID
+    for doc in all_docs:
+        doc.job_id = job.id
+        doc.status = "queued"
+        doc.processing_path = "aws"
+    await db.flush()
+
+    logger.info(
+        "aws_combined_job_enqueued",
+        project_id=str(primary_doc.project_id),
+        job_id=job.id,
+        num_files=len(all_s3_keys),
+        s3_keys=all_s3_keys,
     )
 
     return job.id

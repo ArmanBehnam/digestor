@@ -132,7 +132,7 @@ jobs:
           sleep 30
 
           echo "Checking health endpoint..."
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$ALB_DNS/api/health" --max-time 15)
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$ALB_DNS/api/health" --max-time 15)
 
           if [ "$HTTP_STATUS" = "200" ]; then
             echo "Health check passed (HTTP $HTTP_STATUS)"

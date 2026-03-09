@@ -39,8 +39,8 @@ class OpenAIEngine(BaseLLMEngine):
 
             self.client = openai.OpenAI(api_key=api_key, timeout=self.timeout, http_client=httpx.Client(verify=False))
 
-            test_response = self.client.chat.completions.create(model=self.model, messages=[{"role": "user", "content": "Test"}], max_tokens=10)
-
+            # Skip test API call — wastes tokens and can fail on rate limit
+            # The real call in answer_questions will handle errors gracefully
             self.is_available = True
             logger.info("OpenAI GPT-4o engine initialized successfully")
             return True

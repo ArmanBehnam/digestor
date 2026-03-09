@@ -94,18 +94,38 @@ async def run_pdfjs_processing(
     if text_quality.get("is_empty", False):
         return [], {"is_empty": True, "garbage_ratio": 1.0}
 
-    # Chunk text for LLM processing
-    chunks = _chunk_text(extracted_text, max_chars=40000, overlap=2000)
+    # Chunk text for LLM processing — use larger chunks to reduce API calls
+    chunks = _chunk_text(extracted_text, max_chars=80000, overlap=2000)
+
+    # Cap to 5 chunks max — must complete in <5 min (ALB timeout = 300s)
+    # Take first 3 + last 2 (specs at start, addenda at end)
+    MAX_CHUNKS = 5
+    original_count = len(chunks)
+    if len(chunks) > MAX_CHUNKS:
+        chunks = chunks[:3] + chunks[-2:]
+        logger.info("pdfjs_chunks_capped", doc_id=doc_id,
+                     original=original_count, capped=len(chunks))
+
     logger.info("pdfjs_chunks_created", doc_id=doc_id, chunk_count=len(chunks))
 
-    # Process each chunk through LLM using the existing registry
+    # Process chunks sequentially (avoids OpenAI rate limits) with early stopping
     llm_registry = LLMRegistry(config)
-    # Best answer per question key (Q1, Q2, ...) across all chunks
-    all_answers = {}
+    all_answers = {}  # Best answer per question key (Q1, Q2, ...)
+    total_questions = len(QUESTION_METADATA)
+    no_progress_count = 0  # Track consecutive chunks with no new answers
+
+    def _all_questions_answered():
+        answered = sum(
+            1 for q in range(total_questions)
+            if all_answers.get(f"Q{q+1}", {}).get("_raw_confidence", 0) >= 0.8
+        )
+        return answered >= total_questions
 
     for i, chunk in enumerate(chunks):
+        prev_answered = sum(1 for q in range(total_questions)
+                            if all_answers.get(f"Q{q+1}", {}).get("_raw_confidence", 0) > 0)
+
         try:
-            # answer_questions_with_fallback is synchronous — run in executor
             loop = asyncio.get_event_loop()
             answers = await loop.run_in_executor(
                 None,
@@ -114,7 +134,6 @@ async def run_pdfjs_processing(
                 QUESTIONS,
             )
 
-            # answers is Dict[str, Dict[str, Any]] like {"Q1": {"answer": ..., "confidence": ..., "page": ..., "source": ...}, ...}
             for key, answer_data in answers.items():
                 if isinstance(answer_data, dict):
                     existing = all_answers.get(key)
@@ -125,6 +144,28 @@ async def run_pdfjs_processing(
 
         except Exception as e:
             logger.error("pdfjs_chunk_failed", doc_id=doc_id, chunk=i, error=str(e))
+
+        new_answered = sum(1 for q in range(total_questions)
+                           if all_answers.get(f"Q{q+1}", {}).get("_raw_confidence", 0) > 0)
+        logger.info("pdfjs_chunk_complete", doc_id=doc_id, chunk=f"{i+1}/{len(chunks)}",
+                     answered=new_answered)
+
+        # Early stop: all questions answered
+        if _all_questions_answered():
+            logger.info("pdfjs_early_stop", doc_id=doc_id, reason="all_answered",
+                         chunks_processed=i + 1, total_chunks=len(chunks))
+            break
+
+        # No-progress stop: 2 consecutive chunks with no new answers → give up
+        if new_answered <= prev_answered:
+            no_progress_count += 1
+            if no_progress_count >= 2 and i >= 2:
+                logger.info("pdfjs_early_stop", doc_id=doc_id, reason="no_progress",
+                             chunks_processed=i + 1, total_chunks=len(chunks),
+                             answered=new_answered)
+                break
+        else:
+            no_progress_count = 0
 
     # Transform LLM output into AnalysisResult[] format
     results = _transform_to_analysis_results(all_answers)

@@ -131,6 +131,23 @@ async def upload_document(
             detail="Either project_id or project_name is required",
         )
 
+    # Remove any existing documents with the same filename in this project
+    # (prevents duplicates from re-uploads)
+    existing_docs_stmt = (
+        select(DocumentProcessing)
+        .where(
+            DocumentProcessing.project_id == resolved_project_id,
+            DocumentProcessing.file_name == file.filename,
+        )
+    )
+    existing_docs = (await db.execute(existing_docs_stmt)).scalars().all()
+    if existing_docs:
+        for old_doc in existing_docs:
+            logger.info("removing_duplicate_document",
+                        doc_id=str(old_doc.id), filename=old_doc.file_name)
+            await db.delete(old_doc)
+        await db.flush()
+
     # Upload to S3
     s3_key = f"uploads/{user_id}/{resolved_project_id}/{uuid.uuid4().hex}_{file.filename}"
 

@@ -89,13 +89,42 @@ async def get_project_results(
     docs = (await db.execute(doc_stmt)).scalars().all()
 
     # Determine overall status from all documents
+    # Priority: processing > error > complete (so user sees progress, not premature failure)
     statuses = [d.status for d in docs]
-    if all(s == "complete" for s in statuses):
+    processing_statuses = ("llm_processing", "queued", "ocr_processing", "vlm_processing")
+    has_processing = any(s in processing_statuses for s in statuses)
+    has_error = any(s in ("failed", "error") for s in statuses)
+    all_complete = all(s == "complete" for s in statuses)
+
+    # Self-healing: if worker completed but only updated the primary document,
+    # fix the remaining stuck docs. ONLY triggers when at least one doc is
+    # already "complete" (meaning the worker DID finish). This avoids
+    # prematurely fixing docs that are legitimately queued for the worker.
+    if project.pending_snapshot_json and not all_complete:
+        any_complete = any(s == "complete" for s in statuses)
+        if any_complete and has_processing:
+            try:
+                for d in docs:
+                    if d.status in processing_statuses:
+                        old_status = d.status
+                        d.status = "complete"
+                        d.results = project.pending_snapshot_json
+                        logger.info("auto_fixed_stuck_document",
+                                    doc_id=str(d.id), old_status=old_status)
+                await db.flush()
+                statuses = [d.status for d in docs]
+                has_processing = False
+                all_complete = all(s == "complete" for s in statuses)
+            except Exception as fix_err:
+                logger.warning("auto_fix_stuck_failed", error=str(fix_err))
+
+    if all_complete:
         overall_status = "complete"
-    elif any(s in ("failed", "error") for s in statuses):
-        overall_status = "error"
-    elif any(s in ("llm_processing", "queued", "ocr_processing", "vlm_processing") for s in statuses):
+    elif has_processing:
+        # Still working — don't show error even if some docs failed
         overall_status = "processing"
+    elif has_error:
+        overall_status = "error"
     else:
         overall_status = statuses[0] if statuses else "unknown"
 

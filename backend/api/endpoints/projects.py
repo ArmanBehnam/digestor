@@ -391,6 +391,18 @@ async def get_finalized_project(
     except Exception:
         audit = []
 
+    # Build files_metadata from documents if not set on project
+    files_metadata = project.files_metadata
+    if not files_metadata and docs:
+        files_metadata = [
+            {
+                "name": d.file_name,
+                "path": d.s3_key,
+                "size": d.file_size or 0,
+            }
+            for d in docs
+        ]
+
     # Build nested response matching frontend expectations
     return {
         "project_key": str(project.id),
@@ -406,7 +418,7 @@ async def get_finalized_project(
             "finalized_by_full_name": approver_name,
             "finalized_at": project.approved_at.isoformat() if project.approved_at else None,
             "approval_status": project.approval_status,
-            "files_metadata": project.files_metadata or [],
+            "files_metadata": files_metadata or [],
             "file_path": primary_file_path,
             "notes": project.notes or "",
             "assigned_supervisor_name": supervisor_name,
@@ -1265,6 +1277,24 @@ async def submit_project(
             flag_modified(doc, "results")
 
     project.approval_status = "pending"
+
+    # Populate files_metadata from documents if not already set
+    if not project.files_metadata:
+        doc_meta_stmt = select(DocumentProcessing).where(
+            DocumentProcessing.project_id == project.id
+        ).order_by(DocumentProcessing.created_at.asc())
+        doc_rows = (await db.execute(doc_meta_stmt)).scalars().all()
+        if doc_rows:
+            project.files_metadata = [
+                {
+                    "name": d.file_name,
+                    "path": d.s3_key,
+                    "size": d.file_size or 0,
+                }
+                for d in doc_rows
+            ]
+            flag_modified(project, "files_metadata")
+
     await db.flush()
 
     logger.info("project_submitted", project_id=str(project.id))
