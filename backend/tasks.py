@@ -107,7 +107,7 @@ def update_document_status(document_id, status, results=None, confidence_avg=Non
                           f"(project={project_id}, excluding={document_id})")
                     conn.commit()
                     if updated == 0:
-                        print(f"[DB] WARNING: 0 other docs updated! Check project_id match.")
+                        print("[DB] WARNING: 0 other docs updated! Check project_id match.")
                 except Exception as pe:
                     print(f"[DB] Failed to update other project documents: {pe}")
                     conn.rollback()

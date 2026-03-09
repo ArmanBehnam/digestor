@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from api.dependencies import get_db, get_current_user
-from db.models import User, UserFeedback, FeedbackSurvey
+from db.models import User, FeedbackSurvey
 
 logger = structlog.get_logger()
 router = APIRouter()

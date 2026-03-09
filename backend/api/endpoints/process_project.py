@@ -58,10 +58,8 @@ async def _enrich_tier1_with_bboxes(results: list, docs: list) -> list:
     We run a lightweight OCR pass on just the answer pages, then use
     CoordinateMapper to match answer text to real OCR bounding boxes.
     """
-    import asyncio
     import boto3
     import fitz
-    import io
     from llm.coordinate_mapper import CoordinateMapper
 
     # 1. Collect unique answer pages per document
