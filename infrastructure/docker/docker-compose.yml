@@ -58,7 +58,7 @@ services:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+asyncpg://digestor:digestor_dev_password@postgres:5432/digestor_dev
       REDIS_URL: redis://redis:6379
-      S3_BUCKET: digestor-dev-storage
+      S3_BUCKET: digestor-unified-uploads-dev
       AWS_REGION: us-east-1
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
       COGNITO_APP_CLIENT_ID: ${COGNITO_APP_CLIENT_ID:-}
@@ -87,7 +87,7 @@ services:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+asyncpg://digestor:digestor_dev_password@postgres:5432/digestor_dev
       REDIS_URL: redis://redis:6379
-      S3_BUCKET: digestor-dev-storage
+      S3_BUCKET: digestor-unified-uploads-dev
       AWS_REGION: us-east-1
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}

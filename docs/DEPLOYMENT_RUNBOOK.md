@@ -43,10 +43,10 @@ This creates: ECR repository, RDS PostgreSQL, Cognito user pool, S3 bucket, ALB,
 ```bash
 terraform output
 # alb_dns            = "digestor-dev-XXXXX.us-east-1.elb.amazonaws.com"
-# ecr_repository_url = "800712212732.dkr.ecr.us-east-1.amazonaws.com/digestor-unified-dev"
+# ecr_repository_url = "800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor"
 # rds_endpoint       = "digestor-dev.XXXXX.us-east-1.rds.amazonaws.com"
 # cognito_pool_id    = "us-east-1_XXXXX"
-# s3_bucket          = "digestor-dev-storage"
+# s3_bucket          = "digestor-unified-uploads-dev"
 ```
 
 ---
@@ -153,7 +153,7 @@ docker compose up --build
 
 ```bash
 # Find previous image tag
-aws ecr list-images --repository-name digestor-unified-dev --query 'imageIds[*].imageTag'
+aws ecr list-images --repository-name digetor --query 'imageIds[*].imageTag'
 
 # Update ECS task definition to use the previous tag
 # Then force new deployment

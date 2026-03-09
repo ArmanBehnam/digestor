@@ -118,7 +118,8 @@ async def process_document(
     logger.info("process_pdfjs_path", doc_id=str(doc.id))
     doc.status = "llm_processing"
     doc.processing_path = "pdfjs"
-    await db.flush()
+    # COMMIT now so 'llm_processing' status persists even if ALB kills the connection
+    await db.commit()
 
     from api.endpoints.process_pdfjs import run_pdfjs_processing
     pdfjs_results, text_quality = await run_pdfjs_processing(

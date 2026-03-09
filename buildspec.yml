@@ -3,7 +3,7 @@ version: 0.2
 env:
   variables:
     AWS_DEFAULT_REGION: us-east-1
-    ECR_REPO: 800712212732.dkr.ecr.us-east-1.amazonaws.com/digestor-unified
+    ECR_REPO: 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor
     IMAGE_TAG: latest
 
 phases:

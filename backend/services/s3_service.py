@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError
 
 logger = structlog.get_logger()
 
-S3_BUCKET = os.getenv("S3_BUCKET", "digestor-unified-storage")
+S3_BUCKET = os.getenv("S3_BUCKET", "digestor-unified-uploads-dev")
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
 _s3_client = None
