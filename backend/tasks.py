@@ -309,6 +309,18 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
         redis_conn = Redis.from_url(redis_url, ssl_cert_reqs=None)
     else:
         redis_conn = Redis.from_url(redis_url)
+
+    # --- Check if agentic mode is enabled ---
+    try:
+        from config.config_loader import CONFIG
+        agentic_enabled = CONFIG.get('agentic', {}).get('enabled', False) if CONFIG else False
+    except Exception:
+        agentic_enabled = False
+
+    if agentic_enabled:
+        return _process_pdfs_agentic(
+            file_keys, bucket, project_id, document_id, job_id, redis_conn)
+
     try:
         update_progress(redis_conn, job_id, "initializing", 5, "Starting PDF processing")
         s3 = boto3.client('s3', aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
@@ -642,6 +654,91 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
         # Update RDS document status
         # If the document already has PDF.js results (fallback path), revert to
         # "complete" so the user still sees those results rather than an error
+        fallback_status = _get_fallback_status(document_id)
+        update_document_status(document_id, fallback_status)
+        return {'success': False, 'error': str(e)}
+
+
+def _process_pdfs_agentic(file_keys, bucket, project_id, document_id, job_id, redis_conn):
+    """Process PDFs using the LangGraph agentic pipeline."""
+    try:
+        update_progress(redis_conn, job_id, "initializing", 5, "Starting agentic PDF processing")
+
+        s3 = boto3.client('s3', aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+                          aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+                          region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
+        work_dir = "/tmp/work"
+        Path(work_dir).mkdir(parents=True, exist_ok=True)
+        for old_file in Path(work_dir).glob("*"):
+            try:
+                old_file.unlink()
+            except:
+                pass
+
+        import shutil
+        defaults_file = Path(__file__).parent / 'config' / 'deflection_defaults.csv'
+        if defaults_file.exists():
+            shutil.copy(defaults_file, Path(work_dir) / 'deflection_defaults.csv')
+
+        # Download PDFs
+        update_progress(redis_conn, job_id, "setup", 10, f"Downloading {len(file_keys)} PDF(s)")
+        local_paths = []
+        for key in file_keys:
+            local_path = f"{work_dir}/{Path(key).name}"
+            s3.download_file(bucket, key, local_path)
+            local_paths.append(local_path)
+
+        # Process each PDF through the agentic graph
+        update_progress(redis_conn, job_id, "agentic", 20, "Running agentic pipeline")
+        from core.workflow import Talk2DrawingsWorkflow
+        workflow = Talk2DrawingsWorkflow()
+
+        all_results = []
+        for i, pdf_path in enumerate(local_paths):
+            progress = 20 + (i * 60 // len(local_paths))
+            update_progress(redis_conn, job_id, "agentic", progress,
+                            f"Processing {Path(pdf_path).name} ({i+1}/{len(local_paths)})")
+            result = asyncio.run(workflow.process_document(pdf_path))
+            if result.get('success'):
+                all_results.append(result)
+
+        if not all_results:
+            raise Exception("No PDFs were successfully processed")
+
+        # Extract analysis_results from the agentic pipeline output
+        analysis_results = []
+        for result in all_results:
+            ar = result.get('analysis_results', [])
+            if ar:
+                analysis_results = convert_worker_results_to_analysis_format(ar) if isinstance(ar[0], dict) and 'Question_Number' in ar[0] else ar
+                break
+
+        avg_confidence = None
+        if analysis_results:
+            confs = [p['pairs'][0]['confidence'] for p in analysis_results
+                     if p.get('pairs') and p['pairs'][0].get('confidence')]
+            avg_confidence = sum(confs) / len(confs) if confs else None
+
+        # Cleanup
+        for f in Path(work_dir).glob("*"):
+            try:
+                f.unlink()
+            except:
+                pass
+
+        update_progress(redis_conn, job_id, "complete", 100, "Agentic processing complete!")
+        update_document_status(document_id, "complete",
+                               results=analysis_results or None,
+                               confidence_avg=avg_confidence,
+                               processing_tier=2,
+                               project_id=project_id)
+        return {'success': True, 'mode': 'agentic', 'project_id': project_id}
+
+    except Exception as e:
+        update_progress(redis_conn, job_id, "failed", 0, f"Agentic error: {str(e)}")
+        print(f"Agentic pipeline error: {e}")
+        import traceback
+        traceback.print_exc()
         fallback_status = _get_fallback_status(document_id)
         update_document_status(document_id, fallback_status)
         return {'success': False, 'error': str(e)}

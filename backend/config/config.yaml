@@ -312,3 +312,27 @@ AZURE_API_KEY: ""
 # Application Settings
 save_ocr_json: true
 output_directory: "/tmp"
+
+# ============================================================================
+# Agentic Pipeline Configuration
+# Set enabled: true to use the LangGraph agentic pipeline instead of the
+# legacy sequential pipeline. Requires langgraph package.
+# ============================================================================
+agentic:
+  enabled: false  # Toggle agentic vs legacy mode
+  ocr_quality_threshold: 0.7  # Retry OCR if quality below this
+  qa_confidence_threshold: 0.5  # Retry QA if avg confidence below this
+  max_ocr_retries: 2
+  max_qa_retries: 2
+  memory_ttl_days: 30  # How long to remember document strategies
+  llm_category_preferences:
+    numeric_extraction: "openai_gpt4o"
+    code_lookup: "anthropic_sonnet"
+    ratio_extraction: "openai_gpt4o"
+    factor_extraction: "deepseek_r1"
+  circuit_breaker:
+    failure_threshold: 3
+    cooldown_seconds: 60
+  cost_tracking:
+    enabled: true
+    daily_budget_usd: 50.0  # Alert threshold
