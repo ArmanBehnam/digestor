@@ -16,11 +16,8 @@ sys.path.insert(0, str(current_dir / "llm"))
 sys.path.insert(0, str(current_dir / "ocr"))
 sys.path.insert(0, str(current_dir / "agentic"))
 
-os.environ.setdefault("AZURE_ENDPOINT", "https://ocr-document-cde.cognitiveservices.azure.com/")
-os.environ.setdefault("AZURE_API_KEY", "1YOi3XppiUJNkPqimlGKtVsybyr3vxaZOZyQ353oOXt5OxA32fHVJQQJ99BGACYeBjFXJ3w3AAALACOG4WOR")
-os.environ.setdefault("AWS_ACCESS_KEY_ID", "AKIA3U3RKYD6JK4EUIGC")
-os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "DkGHZyUCkb+wNHI/f5WjOB4HfjghRjooIyXMIveO")
-os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
+# NOTE: Set these env vars externally (e.g. .env file, Secrets Manager, or shell)
+# AZURE_ENDPOINT, AZURE_API_KEY, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
 
 from workflow import Talk2DrawingsWorkflow
 from agents.validation_agent import ValidationAgent
