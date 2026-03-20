@@ -232,8 +232,11 @@ class CoordinateMapper:
 
             x_ratio = chars_in_line / max(line_length, 1)
 
+            # Clamp estimated width to reasonable bounds (answer text region, not whole page)
+            est_width = max(int(len(match['matched_text']) * 8), 40)  # ~8px per char
+            est_width = min(est_width, int(page_width * 0.6))  # max 60% of page width
             return {'x': int(x_ratio * page_width), 'y': int(y_ratio * page_height),
-                'width': int(length_ratio * page_width * 10), 'height': int(page_height * 0.03)}
+                'width': est_width, 'height': int(page_height * 0.025)}
         except Exception as e:
             logger.warning(f"Coordinate estimation failed: {e}")
             return None

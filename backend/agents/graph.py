@@ -260,7 +260,12 @@ async def vlm_check_node(state: ProcessingState) -> Dict[str, Any]:
             raw_conf = 0
             raw_page = 'unknown'
 
-        reference = f"Page {raw_page}" if raw_page not in ('unknown', 'N/A', '') else "Not Found"
+        # Ensure 1-indexed page numbers; page 0 means OCR numbering leaked
+        if isinstance(raw_page, int) and raw_page == 0:
+            raw_page = 1
+        elif raw_page == '0':
+            raw_page = '1'
+        reference = f"Page {raw_page}" if raw_page not in ('unknown', 'N/A', '', 0) else "Not Found"
 
         pair = {
             "answer": raw_answer,
@@ -272,7 +277,12 @@ async def vlm_check_node(state: ProcessingState) -> Dict[str, Any]:
         # Add bbox from coordinate mapping (normalize pixel coords to 0-1)
         if isinstance(answer_data, dict) and isinstance(answer_data.get('coordinates'), dict):
             coords = answer_data['coordinates']
+            # Handle both formats:
+            #   map_multiple_answers: {bounding_box: {x,y,w,h}, ...}
+            #   _map_coordinates_with_metadata: {x,y,width,height} (bbox directly)
             bbox_raw = coords.get('bounding_box', {})
+            if not bbox_raw and 'x' in coords and 'y' in coords:
+                bbox_raw = coords  # coordinates IS the bbox
             if bbox_raw:
                 # Find page dimensions for normalization
                 page_num = answer_data.get('page')

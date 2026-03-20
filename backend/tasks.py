@@ -809,11 +809,11 @@ def merge_batches_for_pdf(batches, pdf_name):
         total_pages += batch_pages
         pages = ocr_data.get('page_results', [])
         for page in pages:
-            page['page_number'] = page['page_number'] + page_offset - 1
+            page['page_number'] = page['page_number'] + page_offset
         all_pages.extend(pages)
         filtered = ocr_data.get('filtered_pages', {}).get('matching_pages', [])
         for page in filtered:
-            page['page_number'] = page['page_number'] + page_offset - 1
+            page['page_number'] = page['page_number'] + page_offset
         all_filtered.extend(filtered)
         page_offset += batch_pages
     avg_confidence = total_confidence / total_pages if total_pages > 0 else 0.9

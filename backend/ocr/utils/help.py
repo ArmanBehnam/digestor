@@ -421,9 +421,32 @@ class Phase1PDFProcessor(PDFProcessor):
 
         page_results = []
         pages_data = {}
+
+        # Get page dimensions from PDF for coordinate normalization.
+        # Must match the scale used by _extract_images_from_pdf (Matrix 1.5x)
+        # since Textract bbox pixel coords are relative to those image dimensions.
+        page_dimensions = {}
+        try:
+            import fitz
+            doc = fitz.open(str(input_path))
+            for page_idx in range(len(doc)):
+                page = doc[page_idx]
+                mat = fitz.Matrix(1.5, 1.5)  # same scale as OCR pipeline
+                pix = page.get_pixmap(matrix=mat)
+                page_dimensions[page_idx + 1] = {
+                    'page_width': pix.width,
+                    'page_height': pix.height,
+                }
+            doc.close()
+        except Exception as e:
+            logger.debug(f"Could not get page dimensions: {e}")
+
         for page_num in range(1, result.total_pages + 1):
+            dims = page_dimensions.get(page_num, {})
             pages_data[page_num] = {
                 'page_number': page_num,
+                'page_width': dims.get('page_width', 1000),
+                'page_height': dims.get('page_height', 1000),
                 'text_elements': [],
                 'table_elements': [],
                 'extracted_text': '',
