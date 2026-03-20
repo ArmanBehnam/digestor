@@ -43,6 +43,12 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Send ID token for endpoints that need user profile claims (email, name)
+    const idToken = localStorage.getItem('id_token');
+    if (idToken) {
+      headers['X-Id-Token'] = idToken;
+    }
+
     // Add Content-Type for JSON bodies
     if (fetchOptions.body && !(fetchOptions.body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';

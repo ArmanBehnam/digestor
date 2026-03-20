@@ -39,7 +39,7 @@ variable "rds_instance_id" {
 }
 
 locals {
-  prefix = "digestor-${var.environment}"
+  prefix = "digestor-w33-${var.environment}"
 }
 
 ###############################################################################

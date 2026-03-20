@@ -53,7 +53,14 @@ class ProcessingState(TypedDict, total=False):
     # Memory suggestions
     memory_suggestions: Dict[str, Any]
 
-    # OCR results
+    # PDF.js (Tier 1) results
+    pdfjs_result: Dict[str, Any]       # Raw LLM answers from PDF.js text
+    pdfjs_analysis: List[Dict[str, Any]]  # AnalysisResult[] format
+    pdfjs_text_quality: Dict[str, Any]  # Text quality metrics
+    pdfjs_sufficient: bool              # Whether Tier 1 was enough
+    extracted_text: str                 # Browser-extracted text (if available)
+
+    # OCR (Tier 2) results
     ocr_strategy: Dict[str, Any]
     ocr_result: Dict[str, Any]
     ocr_quality: float
@@ -65,12 +72,18 @@ class ProcessingState(TypedDict, total=False):
     qa_retries: int
     requery_question_ids: List[int]
 
+    # VLM (Tier 3) results
+    vlm_result: Dict[str, Any]
+    vlm_answers: List[Dict[str, Any]]
+    missing_questions: List[Dict[str, Any]]
+
     # Validation results
     validation_result: Dict[str, Any]
 
     # Final output
     final_results: Dict[str, Any]
     analysis_results: List[Dict[str, Any]]
+    processing_tier: int                # 1=pdfjs, 2=ocr+llm, 3=vlm
 
     # Pipeline metadata
     decisions_log: List[Dict[str, Any]]

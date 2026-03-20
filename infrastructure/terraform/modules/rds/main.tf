@@ -5,16 +5,16 @@ variable "subnet_ids" { type = list(string) }
 locals {
   is_prod       = var.environment == "prod"
   instance_class = local.is_prod ? "db.t3.small" : "db.t3.micro"
-  db_name       = "digestor_${var.environment}"
+  db_name       = "digestor_w33_${var.environment}"
 }
 
 resource "aws_db_subnet_group" "main" {
-  name       = "digestor-${var.environment}"
+  name       = "digestor-w33-${var.environment}"
   subnet_ids = var.subnet_ids
 }
 
 resource "aws_security_group" "rds" {
-  name_prefix = "digestor-rds-${var.environment}-"
+  name_prefix = "digestor-w33-rds-${var.environment}-"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -34,7 +34,7 @@ resource "aws_security_group" "rds" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier     = "digestor-${var.environment}"
+  identifier     = "digestor-w33-${var.environment}"
   engine         = "postgres"
   engine_version = "15.4"
   instance_class = local.instance_class
@@ -62,7 +62,7 @@ resource "aws_db_instance" "main" {
 
 # RDS Proxy for connection pooling
 resource "aws_db_proxy" "main" {
-  name                   = "digestor-${var.environment}"
+  name                   = "digestor-w33-${var.environment}"
   debug_logging          = !local.is_prod
   engine_family          = "POSTGRESQL"
   idle_client_timeout    = 1800
@@ -95,7 +95,7 @@ resource "aws_db_proxy_target" "main" {
 }
 
 resource "aws_iam_role" "rds_proxy" {
-  name = "digestor-rds-proxy-${var.environment}"
+  name = "digestor-w33-rds-proxy-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

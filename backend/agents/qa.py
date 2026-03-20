@@ -338,12 +338,21 @@ class EngineeringQAAgent(Talk2DrawingsBaseAgent):
 
     # ── Existing methods (preserved) ────────────────────────────────
 
-    def _build_minimal_payload(self, structured_payload: Dict) -> str:
-        """Build JSON payload for LLM, same as _process_with_metadata but returns string."""
+    def _build_minimal_payload(self, structured_payload: Dict, max_chars: int = 800000) -> str:
+        """Build JSON payload for LLM, capped to max_chars to fit context windows.
+
+        800K chars ≈ 200K tokens — fits Gemini (1M), Claude (200K).
+        If payload exceeds limit, keeps first N pages that fit.
+        """
         payload_pages = []
+        total_chars = 0
         for page in structured_payload['pages_with_metadata']:
+            text = page.get('extracted_text', '')
+            # Skip mostly empty pages
+            if len(text.strip()) < 50:
+                continue
             page_entry = {
-                'extracted_text': page.get('extracted_text', ''),
+                'extracted_text': text,
                 'page_number': page.get('page_number'),
                 'source_pdf': page.get('source_pdf'),
                 'section': page.get('section', 'N/A'),
@@ -357,7 +366,11 @@ class EngineeringQAAgent(Talk2DrawingsBaseAgent):
                     {'text': t.get('text', ''), 'confidence': t.get('confidence', 0)}
                     for t in table_elements[:20]
                 ]
+            total_chars += len(text)
             payload_pages.append(page_entry)
+            if total_chars > max_chars:
+                logger.info(f"Payload truncated at {len(payload_pages)} pages ({total_chars} chars)")
+                break
 
         minimal_payload = {'pages_with_metadata': payload_pages}
         return json.dumps(minimal_payload, indent=2)

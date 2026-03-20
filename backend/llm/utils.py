@@ -590,9 +590,10 @@ def export_results_with_coordinates(results: List[Dict], output_folder: str, fil
     df.to_csv(csv_path, index=False)
     create_coordinate_json_output(results, json_path)
     coord_count = sum(1 for r in results if r.get('has_coordinates'))
+    success_rate = coord_count / len(results) * 100 if results else 0
     print("Coordinate tracking results:")
     print(f"  Total answers: {len(results)}")
     print(f"  With coordinates: {coord_count}")
-    print(f"  Success rate: {coord_count / len(results) * 100:.1f}%")
+    print(f"  Success rate: {success_rate:.1f}%")
     print(f"  Files created: {csv_path}, {json_path}")
-    return {'csv_path': csv_path, 'json_path': json_path, 'coordinate_success_rate': coord_count / len(results) * 100 if results else 0}
+    return {'csv_path': csv_path, 'json_path': json_path, 'coordinate_success_rate': success_rate}

@@ -10,6 +10,8 @@ from .orchestrator import OrchestratorAgent
 from .triage import TriageAgent
 from .memory import MemoryAgent
 from .supervisor import SupervisorAgent
+from .pdfjs_agent import PDFJSAgent
+from .vlm_agent import VLMAgent
 
 __all__ = [
     'Talk2DrawingsBaseAgent',
@@ -24,6 +26,8 @@ __all__ = [
     'TriageAgent',
     'MemoryAgent',
     'SupervisorAgent',
+    'PDFJSAgent',
+    'VLMAgent',
 ]
 
 

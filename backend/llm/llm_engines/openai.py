@@ -223,8 +223,11 @@ For accurate location tracking, always quote the EXACT text from the document th
         try:
             full_prompt = f"{custom_prompt}\n\n**JSON DATA:**\n{page_text}"
             estimated_tokens = len(full_prompt) // 3
-            model_to_use = 'gpt-4o-mini' if estimated_tokens > 25000 else self.model
-            max_tokens = 2000 if estimated_tokens > 25000 else 2000
+            # Reject payloads that exceed GPT-4o's 128K context
+            if estimated_tokens > 110000:
+                raise RuntimeError(f"Payload too large for GPT-4o: ~{estimated_tokens} tokens (max ~110K)")
+            model_to_use = self.model
+            max_tokens = 2000
 
             print(f"Using model: {model_to_use} (estimated tokens: {estimated_tokens})")
 

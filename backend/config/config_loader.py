@@ -70,6 +70,7 @@ def load_config():
             'openai_api_key':        ('OPENAI_API_KEY',        'OPENAI_API_KEY'),
             'anthropic_api_key':     ('ANTHROPIC_API_KEY',     'ANTHROPIC_API_KEY'),
             'deepseek_api_key':      ('DEEPSEEK_API_KEY',      'DEEPSEEK_API_KEY'),
+            'gemini_api_key':        ('GEMINI_API_KEY',        'GEMINI_API_KEY'),
             'AZURE_ENDPOINT':        ('AZURE_ENDPOINT',        'AZURE_ENDPOINT'),
             'AZURE_API_KEY':         ('AZURE_API_KEY',         'AZURE_API_KEY'),
         }

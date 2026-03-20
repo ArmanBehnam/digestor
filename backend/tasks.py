@@ -361,7 +361,13 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
             update_progress(redis_conn, job_id, "downloading", pdf_progress, f"Downloading {Path(key).name}")
             print(f"\nProcessing PDF {pdf_index + 1}/{len(file_keys)}: {Path(key).name}")
             local_path = f"{work_dir}/{Path(key).name}"
-            s3.download_file(bucket, key, local_path)
+            # Check local storage first (development mode)
+            local_source = Path(os.getenv("LOCAL_UPLOAD_DIR", "/app/local_uploads")) / key
+            if local_source.exists():
+                import shutil as _shutil
+                _shutil.copy(str(local_source), local_path)
+            else:
+                s3.download_file(bucket, key, local_path)
             pdf_file = Path(local_path)
             doc = fitz.open(pdf_file)
             page_count = len(doc)
@@ -660,13 +666,14 @@ def process_pdfs(file_keys, bucket, project_id=None, document_id=None):
 
 
 def _process_pdfs_agentic(file_keys, bucket, project_id, document_id, job_id, redis_conn):
-    """Process PDFs using the LangGraph agentic pipeline."""
+    """Process PDFs using the LangGraph agentic pipeline with 3-tier fallback.
+
+    Flow: Tier 1 (PDF.js+LLM) -> Tier 2 (OCR+LLM) -> Tier 3 (VLM/Gemini)
+    The graph handles routing automatically based on quality thresholds.
+    """
     try:
         update_progress(redis_conn, job_id, "initializing", 5, "Starting agentic PDF processing")
 
-        s3 = boto3.client('s3', aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-                          aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-                          region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
         work_dir = "/tmp/work"
         Path(work_dir).mkdir(parents=True, exist_ok=True)
         for old_file in Path(work_dir).glob("*"):
@@ -680,44 +687,87 @@ def _process_pdfs_agentic(file_keys, bucket, project_id, document_id, job_id, re
         if defaults_file.exists():
             shutil.copy(defaults_file, Path(work_dir) / 'deflection_defaults.csv')
 
-        # Download PDFs
+        # Download PDFs (local storage first, then S3)
         update_progress(redis_conn, job_id, "setup", 10, f"Downloading {len(file_keys)} PDF(s)")
+        local_upload_dir = Path(os.getenv("LOCAL_UPLOAD_DIR", "/app/local_uploads"))
         local_paths = []
         for key in file_keys:
             local_path = f"{work_dir}/{Path(key).name}"
-            s3.download_file(bucket, key, local_path)
+            # Check local storage first (development mode)
+            local_source = local_upload_dir / key
+            if local_source.exists():
+                shutil.copy(str(local_source), local_path)
+                print(f"[DOWNLOAD] Using local file: {local_source}")
+            else:
+                # Fall back to S3
+                s3 = boto3.client('s3', aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+                                  aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+                                  region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
+                s3.download_file(bucket, key, local_path)
+                print(f"[DOWNLOAD] Downloaded from S3: {key}")
             local_paths.append(local_path)
 
         # Process each PDF through the agentic graph
-        update_progress(redis_conn, job_id, "agentic", 20, "Running agentic pipeline")
+        update_progress(redis_conn, job_id, "agentic", 15,
+                        "Running agentic pipeline (Tier 1: PDF text extraction)")
         from core.workflow import Talk2DrawingsWorkflow
         workflow = Talk2DrawingsWorkflow()
 
         all_results = []
         for i, pdf_path in enumerate(local_paths):
-            progress = 20 + (i * 60 // len(local_paths))
+            progress = 15 + (i * 70 // len(local_paths))
             update_progress(redis_conn, job_id, "agentic", progress,
                             f"Processing {Path(pdf_path).name} ({i+1}/{len(local_paths)})")
+
+            print(f"\n{'='*60}")
+            print(f"[AGENTIC] Processing: {Path(pdf_path).name}")
+            print(f"{'='*60}")
+
             result = asyncio.run(workflow.process_document(pdf_path))
+
             if result.get('success'):
                 all_results.append(result)
+                # Log decisions
+                decisions = result.get('decisions_log', [])
+                for td in decisions:
+                    if 'Tier' in td.get('decision', '') or 'tier' in td.get('decision', '').lower() \
+                       or td.get('decision_type') in ('escalation_triggered', 'quality_threshold_met'):
+                        print(f"  [DECISION] {td.get('agent', '?')}: {td.get('decision', '')}")
+            else:
+                print(f"  [ERROR] Pipeline failed: {result.get('error', 'unknown')}")
 
         if not all_results:
-            raise Exception("No PDFs were successfully processed")
+            raise Exception("No PDFs were successfully processed by the agentic pipeline")
 
         # Extract analysis_results from the agentic pipeline output
         analysis_results = []
+        processing_tier = 1
         for result in all_results:
             ar = result.get('analysis_results', [])
             if ar:
-                analysis_results = convert_worker_results_to_analysis_format(ar) if isinstance(ar[0], dict) and 'Question_Number' in ar[0] else ar
+                if isinstance(ar[0], dict) and 'Question_Number' in ar[0]:
+                    analysis_results = convert_worker_results_to_analysis_format(ar)
+                else:
+                    analysis_results = ar
+                # Get the tier from the pipeline result
+                final = result.get('final_results', {})
+                processing_tier = final.get('processing_tier',
+                                  result.get('processing_tier', 1))
                 break
 
+        # Calculate average confidence
         avg_confidence = None
         if analysis_results:
-            confs = [p['pairs'][0]['confidence'] for p in analysis_results
-                     if p.get('pairs') and p['pairs'][0].get('confidence')]
+            confs = []
+            for p in analysis_results:
+                if p.get('pairs') and p['pairs'][0].get('confidence'):
+                    conf = p['pairs'][0]['confidence']
+                    if isinstance(conf, (int, float)):
+                        confs.append(conf)
             avg_confidence = sum(confs) / len(confs) if confs else None
+
+        print(f"\n[AGENTIC] Results: {len(analysis_results)} answers, "
+              f"avg_confidence={avg_confidence}")
 
         # Cleanup
         for f in Path(work_dir).glob("*"):
@@ -726,11 +776,12 @@ def _process_pdfs_agentic(file_keys, bucket, project_id, document_id, job_id, re
             except:
                 pass
 
-        update_progress(redis_conn, job_id, "complete", 100, "Agentic processing complete!")
+        update_progress(redis_conn, job_id, "complete", 100,
+                        f"Agentic processing complete!")
         update_document_status(document_id, "complete",
                                results=analysis_results or None,
                                confidence_avg=avg_confidence,
-                               processing_tier=2,
+                               processing_tier=processing_tier,
                                project_id=project_id)
         return {'success': True, 'mode': 'agentic', 'project_id': project_id}
 

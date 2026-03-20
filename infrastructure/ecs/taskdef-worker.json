@@ -9,18 +9,20 @@
       "environment": [
         { "name": "PROCESS_TYPE", "value": "worker" },
         { "name": "ENVIRONMENT", "value": "dev" },
+        { "name": "AGENTIC_ENABLED", "value": "true" },
         { "name": "AWS_REGION", "value": "us-east-1" },
         { "name": "AWS_DEFAULT_REGION", "value": "us-east-1" },
         { "name": "LOG_LEVEL", "value": "INFO" },
-        { "name": "S3_BUCKET", "value": "digestor-unified-uploads-dev" },
-        { "name": "S3_BUCKET_NAME", "value": "digestor-unified-uploads-dev" },
-        { "name": "COGNITO_USER_POOL_ID", "value": "us-east-1_DGMrbW6Vw" },
-        { "name": "COGNITO_APP_CLIENT_ID", "value": "6k00q57poml1uooj9aal7tga8c" },
-        { "name": "COGNITO_CLIENT_ID", "value": "6k00q57poml1uooj9aal7tga8c" },
+        { "name": "S3_BUCKET", "value": "digestor-w33-uploads-dev" },
+        { "name": "S3_BUCKET_NAME", "value": "digestor-w33-uploads-dev" },
+        { "name": "COGNITO_USER_POOL_ID", "value": "COGNITO_POOL_PLACEHOLDER" },
+        { "name": "COGNITO_APP_CLIENT_ID", "value": "COGNITO_CLIENT_PLACEHOLDER" },
+        { "name": "COGNITO_CLIENT_ID", "value": "COGNITO_CLIENT_PLACEHOLDER" },
         { "name": "COGNITO_REGION", "value": "us-east-1" },
         { "name": "DATABASE_URL", "value": "DATABASE_URL_PLACEHOLDER" },
         { "name": "REDIS_URL", "value": "REDIS_URL_PLACEHOLDER" },
         { "name": "OPENAI_API_KEY", "value": "OPENAI_API_KEY_PLACEHOLDER" },
+        { "name": "ANTHROPIC_API_KEY", "value": "ANTHROPIC_API_KEY_PLACEHOLDER" },
         { "name": "AZURE_API_KEY", "value": "AZURE_API_KEY_PLACEHOLDER" },
         { "name": "AZURE_ENDPOINT", "value": "AZURE_ENDPOINT_PLACEHOLDER" },
         { "name": "GEMINI_API_KEY", "value": "GEMINI_API_KEY_PLACEHOLDER" }
@@ -30,7 +32,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/digestor-dev",
+          "awslogs-group": "/ecs/digestor-w33-dev",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "worker"
         }
@@ -38,13 +40,13 @@
       "systemControls": []
     }
   ],
-  "family": "digestor-worker-dev",
-  "taskRoleArn": "arn:aws:iam::800712212732:role/digestor-ecs-task-dev",
-  "executionRoleArn": "arn:aws:iam::800712212732:role/digestor-ecs-execution-dev",
+  "family": "digestor-w33-worker-dev",
+  "taskRoleArn": "arn:aws:iam::800712212732:role/digestor-w33-ecs-task-dev",
+  "executionRoleArn": "arn:aws:iam::800712212732:role/digestor-w33-ecs-execution-dev",
   "networkMode": "awsvpc",
   "volumes": [],
   "placementConstraints": [],
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "2048",
-  "memory": "4096"
+  "memory": "8192"
 }

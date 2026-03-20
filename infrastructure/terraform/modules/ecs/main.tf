@@ -12,17 +12,21 @@ variable "rds_secret_arn" {
   type        = string
   description = "ARN of the RDS master user secret in Secrets Manager"
 }
+variable "secrets_arn" {
+  type        = string
+  description = "ARN of the Secrets Manager secret containing API keys"
+}
 
 locals {
   is_prod    = var.environment == "prod"
   web_cpu    = local.is_prod ? 1024 : 512   # 1 vCPU prod, 0.5 vCPU dev
   web_memory = local.is_prod ? 2048 : 1024  # 2GB prod, 1GB dev
-  wrk_cpu    = local.is_prod ? 1024 : 512
-  wrk_memory = local.is_prod ? 4096 : 2048  # 4GB prod, 2GB dev
+  wrk_cpu    = local.is_prod ? 1024 : 2048
+  wrk_memory = local.is_prod ? 4096 : 8192  # 8GB dev, 4GB prod
 }
 
 resource "aws_ecs_cluster" "main" {
-  name = "digestor-${var.environment}"
+  name = "digestor-w33-${var.environment}"
 
   setting {
     name  = "containerInsights"
@@ -31,7 +35,7 @@ resource "aws_ecs_cluster" "main" {
 }
 
 resource "aws_security_group" "ecs" {
-  name_prefix = "digestor-ecs-${var.environment}-"
+  name_prefix = "digestor-w33-ecs-${var.environment}-"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -51,7 +55,7 @@ resource "aws_security_group" "ecs" {
 
 # IAM Role for ECS Tasks
 resource "aws_iam_role" "ecs_task" {
-  name = "digestor-ecs-task-${var.environment}"
+  name = "digestor-w33-ecs-task-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -100,7 +104,7 @@ resource "aws_iam_role_policy" "ecs_task" {
 }
 
 resource "aws_iam_role" "ecs_execution" {
-  name = "digestor-ecs-execution-${var.environment}"
+  name = "digestor-w33-ecs-execution-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -117,15 +121,29 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy" "ecs_execution_secrets" {
+  name = "secrets-manager-access"
+  role = aws_iam_role.ecs_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue"]
+      Resource = [var.secrets_arn, var.rds_secret_arn]
+    }]
+  })
+}
+
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "main" {
-  name              = "/ecs/digestor-${var.environment}"
+  name              = "/ecs/digestor-w33-${var.environment}"
   retention_in_days = local.is_prod ? 30 : 7
 }
 
 # --- Web Service Task Definition ---
 resource "aws_ecs_task_definition" "web" {
-  family                   = "digestor-web-${var.environment}"
+  family                   = "digestor-w33-web-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = local.web_cpu
@@ -141,13 +159,21 @@ resource "aws_ecs_task_definition" "web" {
       { name = "PROCESS_TYPE", value = "web" },
       { name = "ENVIRONMENT", value = var.environment },
       { name = "RDS_ENDPOINT", value = var.rds_endpoint },
-      { name = "RDS_DB_NAME", value = "digestor_${var.environment}" },
+      { name = "RDS_DB_NAME", value = "digestor_w33_${var.environment}" },
       { name = "RDS_SECRET_ARN", value = var.rds_secret_arn },
       { name = "REDIS_URL", value = "redis://${var.redis_endpoint}:6379" },
       { name = "S3_BUCKET", value = var.s3_bucket },
       { name = "COGNITO_USER_POOL_ID", value = var.cognito_pool_id },
       { name = "COGNITO_APP_CLIENT_ID", value = var.cognito_client_id },
       { name = "USE_SECRETS_MANAGER", value = "true" },
+      { name = "AGENTIC_ENABLED", value = "true" },
+    ]
+    secrets = [
+      { name = "OPENAI_API_KEY", valueFrom = "${var.secrets_arn}:OPENAI_API_KEY::" },
+      { name = "GEMINI_API_KEY", valueFrom = "${var.secrets_arn}:GEMINI_API_KEY::" },
+      { name = "ANTHROPIC_API_KEY", valueFrom = "${var.secrets_arn}:ANTHROPIC_API_KEY::" },
+      { name = "AZURE_API_KEY", valueFrom = "${var.secrets_arn}:AZURE_API_KEY::" },
+      { name = "AZURE_ENDPOINT", valueFrom = "${var.secrets_arn}:AZURE_ENDPOINT::" },
     ]
     logConfiguration = {
       logDriver = "awslogs"
@@ -162,7 +188,7 @@ resource "aws_ecs_task_definition" "web" {
 
 # --- Worker Service Task Definition ---
 resource "aws_ecs_task_definition" "worker" {
-  family                   = "digestor-worker-${var.environment}"
+  family                   = "digestor-w33-worker-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = local.wrk_cpu
@@ -177,11 +203,19 @@ resource "aws_ecs_task_definition" "worker" {
       { name = "PROCESS_TYPE", value = "worker" },
       { name = "ENVIRONMENT", value = var.environment },
       { name = "RDS_ENDPOINT", value = var.rds_endpoint },
-      { name = "RDS_DB_NAME", value = "digestor_${var.environment}" },
+      { name = "RDS_DB_NAME", value = "digestor_w33_${var.environment}" },
       { name = "RDS_SECRET_ARN", value = var.rds_secret_arn },
       { name = "REDIS_URL", value = "redis://${var.redis_endpoint}:6379" },
       { name = "S3_BUCKET", value = var.s3_bucket },
       { name = "USE_SECRETS_MANAGER", value = "true" },
+      { name = "AGENTIC_ENABLED", value = "true" },
+    ]
+    secrets = [
+      { name = "OPENAI_API_KEY", valueFrom = "${var.secrets_arn}:OPENAI_API_KEY::" },
+      { name = "GEMINI_API_KEY", valueFrom = "${var.secrets_arn}:GEMINI_API_KEY::" },
+      { name = "ANTHROPIC_API_KEY", valueFrom = "${var.secrets_arn}:ANTHROPIC_API_KEY::" },
+      { name = "AZURE_API_KEY", valueFrom = "${var.secrets_arn}:AZURE_API_KEY::" },
+      { name = "AZURE_ENDPOINT", valueFrom = "${var.secrets_arn}:AZURE_ENDPOINT::" },
     ]
     logConfiguration = {
       logDriver = "awslogs"
@@ -196,7 +230,7 @@ resource "aws_ecs_task_definition" "worker" {
 
 # --- Web Service ---
 resource "aws_ecs_service" "web" {
-  name            = "digestor-web-${var.environment}"
+  name            = "digestor-w33-web-${var.environment}"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.web.arn
   desired_count   = local.is_prod ? 2 : 1
@@ -217,7 +251,7 @@ resource "aws_ecs_service" "web" {
 
 # --- Worker Service ---
 resource "aws_ecs_service" "worker" {
-  name            = "digestor-worker-${var.environment}"
+  name            = "digestor-w33-worker-${var.environment}"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.worker.arn
   desired_count   = 1

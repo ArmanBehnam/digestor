@@ -3,8 +3,8 @@ version: 0.2
 env:
   variables:
     AWS_DEFAULT_REGION: us-east-1
-    ECR_REPO: 800712212732.dkr.ecr.us-east-1.amazonaws.com/digetor
     IMAGE_TAG: latest
+    # ECR_REPO is injected by CodeBuild project environment variables from Terraform
 
 phases:
   pre_build:
@@ -25,10 +25,12 @@ phases:
       - echo Pushing Docker image...
       - docker push $ECR_REPO:$IMAGE_TAG
       - docker push $ECR_REPO:latest
-      # Generate ECS image definitions for CodePipeline deploy stage
-      - printf '[{"name":"web","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG > imagedefinitions.json
+      # Generate separate ECS image definitions for web and worker services
+      - printf '[{"name":"web","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG > imagedefinitions-web.json
+      - printf '[{"name":"worker","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG > imagedefinitions-worker.json
       - echo Build completed on `date`
 
 artifacts:
   files:
-    - imagedefinitions.json
+    - imagedefinitions-web.json
+    - imagedefinitions-worker.json

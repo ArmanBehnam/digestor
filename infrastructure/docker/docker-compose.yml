@@ -44,7 +44,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: python -m alembic upgrade head
+    entrypoint: ["python", "-m", "alembic", "upgrade", "head"]
+    healthcheck:
+      disable: true
     restart: "no"
 
   # --- Web Server (FastAPI + React) ---
@@ -52,23 +54,20 @@ services:
     build:
       context: ../..
       dockerfile: infrastructure/docker/Dockerfile
+    env_file:
+      - ../../.env
     environment:
       PROCESS_TYPE: web
       PORT: "8080"
       ENVIRONMENT: development
       DATABASE_URL: postgresql+asyncpg://digestor:digestor_dev_password@postgres:5432/digestor_dev
       REDIS_URL: redis://redis:6379
-      S3_BUCKET: digestor-unified-uploads-dev
-      AWS_REGION: us-east-1
-      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
-      COGNITO_APP_CLIENT_ID: ${COGNITO_APP_CLIENT_ID:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ALLOWED_ORIGINS: http://localhost:8080,http://localhost:5173
       SQL_ECHO: "false"
     ports:
       - "8080:8080"
+    volumes:
+      - upload_data:/app/local_uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,16 +81,15 @@ services:
     build:
       context: ../..
       dockerfile: infrastructure/docker/Dockerfile
+    env_file:
+      - ../../.env
     environment:
       PROCESS_TYPE: worker
       ENVIRONMENT: development
       DATABASE_URL: postgresql+asyncpg://digestor:digestor_dev_password@postgres:5432/digestor_dev
       REDIS_URL: redis://redis:6379
-      S3_BUCKET: digestor-unified-uploads-dev
-      AWS_REGION: us-east-1
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    volumes:
+      - upload_data:/app/local_uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -116,3 +114,4 @@ services:
 
 volumes:
   postgres_data:
+  upload_data:

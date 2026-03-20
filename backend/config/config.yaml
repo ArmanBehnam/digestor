@@ -212,8 +212,8 @@ custom_keywords: []  # e.g. ["beam", "column"]
 
 # LLM Engines Configuration (hierarchical fallback)
 llm_engines:
-  preferred_engine: "openai_gpt4o"
-  fallback_engines: ["anthropic_sonnet", "deepseek_r1"]
+  preferred_engine: "gemini_flash"
+  fallback_engines: ["openai_gpt4o", "anthropic_sonnet", "deepseek_r1"]
   confidence_threshold: 0.5
   timeout_seconds: 120
   max_retries: 3
@@ -319,17 +319,17 @@ output_directory: "/tmp"
 # legacy sequential pipeline. Requires langgraph package.
 # ============================================================================
 agentic:
-  enabled: false  # Toggle agentic vs legacy mode
+  enabled: true  # Toggle agentic vs legacy mode
   ocr_quality_threshold: 0.7  # Retry OCR if quality below this
   qa_confidence_threshold: 0.5  # Retry QA if avg confidence below this
   max_ocr_retries: 2
   max_qa_retries: 2
   memory_ttl_days: 30  # How long to remember document strategies
   llm_category_preferences:
-    numeric_extraction: "openai_gpt4o"
-    code_lookup: "anthropic_sonnet"
-    ratio_extraction: "openai_gpt4o"
-    factor_extraction: "deepseek_r1"
+    numeric_extraction: "gemini_flash"
+    code_lookup: "gemini_flash"
+    ratio_extraction: "gemini_flash"
+    factor_extraction: "gemini_flash"
   circuit_breaker:
     failure_threshold: 3
     cooldown_seconds: 60

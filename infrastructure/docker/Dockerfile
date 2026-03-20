@@ -47,6 +47,9 @@ COPY --from=frontend-builder /frontend/dist ./static/
 # Copy shared config
 COPY shared/ ./shared/
 
+# Create local uploads directory for development fallback
+RUN mkdir -p /app/local_uploads
+
 # Set ownership
 RUN chown -R appuser:appuser /app
 

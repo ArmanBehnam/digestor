@@ -1,8 +1,9 @@
 import apiClient from "@/lib/apiClient";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Configure PDF.js worker using bundled worker (must match PDFViewer/PDFViewerWithAnnotations)
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export interface FileMetadata {
   name: string;

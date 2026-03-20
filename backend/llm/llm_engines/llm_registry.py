@@ -4,6 +4,7 @@ from typing import Dict, List, Any
 import logging
 
 from .base import BaseLLMEngine
+from .gemini import GeminiEngine
 from .openai import OpenAIEngine
 from .anthropic import AnthropicEngine
 from .deepseek import DeepSeekEngine
@@ -30,9 +31,10 @@ class LLMRegistry:
         self._initialize_engines()
 
     def _initialize_engines(self):
-        all_engines = [OpenAIEngine(),
-            AnthropicEngine(),
-            DeepSeekEngine()]
+        all_engines = [GeminiEngine(),   # Priority 5 — 1M context, best for large docs
+            OpenAIEngine(),                # Priority 10
+            AnthropicEngine(),             # Priority 20
+            DeepSeekEngine()]              # Priority 30
 
         for engine in all_engines:
             try:

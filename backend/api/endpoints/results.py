@@ -100,12 +100,15 @@ async def get_project_results(
     # fix the remaining stuck docs. ONLY triggers when at least one doc is
     # already "complete" (meaning the worker DID finish). This avoids
     # prematurely fixing docs that are legitimately queued for the worker.
+    # IMPORTANT: Do NOT overwrite documents that already have results —
+    # the agentic pipeline may have saved newer results that the snapshot
+    # hasn't been updated with yet.
     if project.pending_snapshot_json and not all_complete:
         any_complete = any(s == "complete" for s in statuses)
         if any_complete and has_processing:
             try:
                 for d in docs:
-                    if d.status in processing_statuses:
+                    if d.status in processing_statuses and d.results is None:
                         old_status = d.status
                         d.status = "complete"
                         d.results = project.pending_snapshot_json
@@ -113,7 +116,7 @@ async def get_project_results(
                                     doc_id=str(d.id), old_status=old_status)
                 await db.flush()
                 statuses = [d.status for d in docs]
-                has_processing = False
+                has_processing = any(s in processing_statuses for s in statuses)
                 all_complete = all(s == "complete" for s in statuses)
             except Exception as fix_err:
                 logger.warning("auto_fix_stuck_failed", error=str(fix_err))

@@ -1,7 +1,7 @@
 variable "environment" { type = string }
 
 resource "aws_cognito_user_pool" "main" {
-  name = "digestor-users-${var.environment}"
+  name = "digestor-w33-users-${var.environment}"
 
   # Username is email
   username_attributes      = ["email"]
@@ -76,7 +76,7 @@ resource "aws_cognito_user_pool" "main" {
 
 # App Client
 resource "aws_cognito_user_pool_client" "web" {
-  name         = "digestor-web-${var.environment}"
+  name         = "digestor-w33-web-${var.environment}"
   user_pool_id = aws_cognito_user_pool.main.id
 
   explicit_auth_flows = [

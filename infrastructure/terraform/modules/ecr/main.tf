@@ -1,7 +1,7 @@
 variable "environment" { type = string }
 
 resource "aws_ecr_repository" "main" {
-  name                 = "digetor"
+  name                 = "digestor-w33"
   image_tag_mutability = "MUTABLE"
   force_delete         = var.environment != "prod"
 

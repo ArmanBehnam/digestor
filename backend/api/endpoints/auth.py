@@ -4,9 +4,11 @@ Handles registration, login, logout, token refresh, password reset.
 """
 
 import os
+import json
+import base64
 import structlog
 import boto3
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +25,19 @@ COGNITO_APP_CLIENT_ID = os.getenv("COGNITO_APP_CLIENT_ID", "")
 
 def _cognito_client():
     return boto3.client("cognito-idp", region_name=COGNITO_REGION)
+
+
+def _decode_id_token_claims(id_token: str) -> dict:
+    """Decode ID token payload without verification (already authenticated via access token).
+    ID tokens contain email, name, and other user profile claims."""
+    try:
+        payload = id_token.split(".")[1]
+        # Add padding
+        payload += "=" * (4 - len(payload) % 4)
+        decoded = base64.urlsafe_b64decode(payload)
+        return json.loads(decoded)
+    except Exception:
+        return {}
 
 
 # --- Request Models ---
@@ -264,18 +279,89 @@ async def logout(current_user: dict = Depends(get_current_user)):
 
 @router.get("/me")
 async def get_current_user_profile(
+    request: Request,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get current user's profile."""
+    """Get current user's profile. Auto-provisions local record if missing."""
     from sqlalchemy import select
+
+    # Extract user claims from ID token (has email/name; access token does not)
+    id_token = request.headers.get("x-id-token", "")
+    id_claims = _decode_id_token_claims(id_token) if id_token else {}
 
     stmt = select(User).where(User.cognito_sub == current_user["sub"])
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
+    # Repair: if existing user has UUID as name/email, fix from ID token claims
+    if user and (user.full_name == user.cognito_sub or user.email == user.cognito_sub):
+        repaired = False
+        # Try ID token first (reliable, no AWS API call needed)
+        if user.email == user.cognito_sub and id_claims.get("email"):
+            user.email = id_claims["email"]
+            repaired = True
+        if user.full_name == user.cognito_sub and id_claims.get("name"):
+            user.full_name = id_claims["name"]
+            repaired = True
+        elif user.full_name == user.cognito_sub and id_claims.get("email"):
+            user.full_name = id_claims["email"]
+            repaired = True
+
+        # Fall back to Cognito admin API if ID token didn't help
+        if not repaired:
+            try:
+                cognito = _cognito_client()
+                cognito_user = cognito.admin_get_user(
+                    UserPoolId=COGNITO_USER_POOL_ID,
+                    Username=current_user.get("username", current_user["sub"]),
+                )
+                attrs = {a["Name"]: a["Value"] for a in cognito_user.get("UserAttributes", [])}
+                if user.email == user.cognito_sub and attrs.get("email"):
+                    user.email = attrs["email"]
+                if user.full_name == user.cognito_sub and attrs.get("name"):
+                    user.full_name = attrs["name"]
+                elif user.full_name == user.cognito_sub and attrs.get("email"):
+                    user.full_name = attrs["email"]
+            except Exception as e:
+                logger.warning("user_repair_failed", sub=current_user["sub"], error=str(e))
+
+        if user.full_name != user.cognito_sub or user.email != user.cognito_sub:
+            await db.flush()
+            logger.info("user_profile_repaired", email=user.email, full_name=user.full_name)
+
     if not user:
-        raise HTTPException(status_code=404, detail="User profile not found")
+        # Auto-provision: user exists in Cognito but not in local DB
+        # Use ID token claims first (access tokens lack email/name)
+        email = id_claims.get("email", "") or current_user.get("email", "")
+        full_name = id_claims.get("name", "") or current_user.get("name", "")
+
+        if not email or not full_name:
+            try:
+                cognito = _cognito_client()
+                cognito_user = cognito.admin_get_user(
+                    UserPoolId=COGNITO_USER_POOL_ID,
+                    Username=current_user.get("username", current_user["sub"]),
+                )
+                attrs = {a["Name"]: a["Value"] for a in cognito_user.get("UserAttributes", [])}
+                email = email or attrs.get("email", current_user.get("username", ""))
+                full_name = full_name or attrs.get("name", email)
+            except Exception as e:
+                logger.warning("cognito_user_lookup_failed", sub=current_user["sub"], error=str(e))
+                email = email or current_user.get("username", current_user["sub"])
+                full_name = full_name or email
+
+        groups = current_user.get("cognito:groups", [])
+        role = "admin" if "admin" in groups else "supervisor" if "supervisor" in groups else "engineer"
+        user = User(
+            cognito_sub=current_user["sub"],
+            email=email,
+            full_name=full_name,
+            role=role,
+        )
+        db.add(user)
+        await db.flush()
+        logger.info("user_auto_provisioned", email=user.email, full_name=user.full_name, sub=current_user["sub"])
 
     return {
         "id": str(user.id),

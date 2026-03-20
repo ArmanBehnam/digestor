@@ -70,7 +70,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
         self.config = config or {}
         self.limits_file = self.config.get('limits_file', 'limits.json')
         self.rules = (config or {}).get('validation_rules', {})
-        print(f"{self.name}: Loaded {len(self.rules)} validation rules")
+        logger.info(f"{self.name}: Loaded {len(self.rules)} validation rules")
 
     def _load_rules(self) -> Dict[str, Any]:
         try:
@@ -84,7 +84,7 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
             with open(limits_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Could not load limits file: {e}")
+            logger.info(f"Could not load limits file: {e}")
             return {}
 
     def validate_input(self, input_data: Any) -> bool:
@@ -120,9 +120,9 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
             status_counts = df['Validation_Status'].value_counts().to_dict()
             conflicts = self.detect_conflicts(df)
             if conflicts:
-                print(f"Conflicts detected in {len(conflicts)} questions")
+                logger.info(f"Conflicts detected in {len(conflicts)} questions")
                 for question, conflict_data in conflicts.items():
-                    print(f"  {question}: {len(conflict_data['conflicting_answers'])} different answers")
+                    logger.info(f"  {question}: {len(conflict_data['conflicting_answers'])} different answers")
 
             # --- Agentic: cross-answer contradiction detection ---
             answers_by_qid = self._extract_answers_by_qid(input_data)
@@ -143,11 +143,11 @@ class ValidationAgent(Talk2DrawingsBaseAgent):
                     decision_type="requery_suggestion"
                 )
 
-            print(f"Unit standardization: {standardized_count} answers modified")
-            print(f"Validation completed: {status_counts}")
-            print(f"Cross-answer contradictions: {len(contradictions)}")
-            print(f"Suspicious patterns: {len(suspicious)}")
-            print(f"Requery suggestions: {len(requery_suggestions)}")
+            logger.info(f"Unit standardization: {standardized_count} answers modified")
+            logger.info(f"Validation completed: {status_counts}")
+            logger.info(f"Cross-answer contradictions: {len(contradictions)}")
+            logger.info(f"Suspicious patterns: {len(suspicious)}")
+            logger.info(f"Requery suggestions: {len(requery_suggestions)}")
 
             return {'success': True,
                 'agent': self.name,

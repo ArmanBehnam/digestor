@@ -14,7 +14,7 @@ class AnthropicEngine(BaseLLMEngine):
     def __init__(self):
         super().__init__("anthropic_sonnet", priority=20)  # Second priority
         self.client = None
-        self.model = "claude-3-5-sonnet-20241022"
+        self.model = "claude-sonnet-4-6"
 
     def initialize(self, config: Dict[str, Any]) -> bool:
         try:
@@ -30,21 +30,11 @@ class AnthropicEngine(BaseLLMEngine):
                 logger.error("anthropic package not installed. Install with: pip install anthropic")
                 return False
 
-            try:
-                test_response = self.client.messages.create(
-                    model=self.model,
-                    max_tokens=10,
-                    messages=[{"role": "user", "content": "Test"}]
-                )
-
-                self.is_available = True
-                logger.info("Anthropic Claude Sonnet engine initialized successfully")
-                return True
-            except Exception as e:
-                logger.error(f"Anthropic API test failed: {e}")
-                self.last_error = e
-                self.is_available = False
-                return False
+            # Skip test API call — wastes tokens and can fail on rate limit
+            # The real call in answer_questions will handle errors gracefully
+            self.is_available = True
+            logger.info(f"Anthropic Claude Sonnet engine initialized successfully (model: {self.model})")
+            return True
 
         except Exception as e:
             logger.error(f"Failed to initialize Anthropic engine: {e}")
@@ -112,6 +102,28 @@ class AnthropicEngine(BaseLLMEngine):
                 'source': self.engine_name
             })
 
+        except Exception as e:
+            self._record_request(success=False, error=e)
+            raise e
+
+    def answer_questions_with_custom_prompt(self, page_text: str, questions: List[str], custom_prompt: str) -> Dict[str, Dict[str, Any]]:
+        """Answer questions using a custom enhanced prompt."""
+        if not self.is_available or not self.client:
+            raise RuntimeError("Anthropic engine not available")
+        try:
+            full_prompt = f"{custom_prompt}\n\n**JSON DATA:**\n{page_text}"
+
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=4096,
+                temperature=0.2,
+                messages=[{"role": "user", "content": full_prompt}]
+            )
+
+            content = response.content[0].text if response.content else ""
+            answers = self._parse_response(content, questions)
+            self._record_request(success=True)
+            return answers
         except Exception as e:
             self._record_request(success=False, error=e)
             raise e
