@@ -5,7 +5,7 @@
 # =============================================================================
 
 # --- Stage 1: Build Frontend ---
-FROM node:20-alpine AS frontend-builder
+FROM public.ecr.aws/docker/library/node:20-alpine AS frontend-builder
 
 WORKDIR /frontend
 
@@ -18,7 +18,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # --- Stage 2: Python Backend ---
-FROM python:3.12-slim AS backend
+FROM public.ecr.aws/docker/library/python:3.12-slim AS backend
 
 # System dependencies for OCR and PDF processing
 RUN apt-get update && apt-get install -y --no-install-recommends \
