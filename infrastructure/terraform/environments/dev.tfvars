@@ -7,5 +7,5 @@ environment = "dev"
 aws_region  = "us-east-1"
 
 # --- CodePipeline ---
-github_repo   = "ArmanBehnam/clark"
+github_repo   = "ArmanBehnam/digestor"
 github_branch = "aws-deployment"

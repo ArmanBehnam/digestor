@@ -22,7 +22,7 @@ resource "aws_security_group" "rds" {
     to_port     = 5432
     protocol    = "tcp"
     description = "PostgreSQL from VPC"
-    cidr_blocks = ["10.0.0.0/16"]
+    cidr_blocks = ["10.33.0.0/16"]
   }
 
   egress {
@@ -36,7 +36,7 @@ resource "aws_security_group" "rds" {
 resource "aws_db_instance" "main" {
   identifier     = "digestor-w33-${var.environment}"
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "15.12"
   instance_class = local.instance_class
 
   db_name                     = local.db_name
