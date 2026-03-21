@@ -73,7 +73,9 @@ resource "aws_s3_bucket_cors_configuration" "main" {
     ] : [
       "http://localhost:5173",
       "http://localhost:8080",
-      "https://*.us-east-1.elb.amazonaws.com"
+      "http://*.us-east-1.elb.amazonaws.com",
+      "https://*.us-east-1.elb.amazonaws.com",
+      "*"
     ]
     max_age_seconds = 3600
   }
