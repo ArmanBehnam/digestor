@@ -16,16 +16,54 @@ from PIL import Image
 import io
 
 
+def _resolve_database_url():
+    """Resolve DATABASE_URL the same way db/session.py does:
+    1. Explicit DATABASE_URL env var
+    2. RDS_SECRET_ARN + RDS_ENDPOINT + RDS_DB_NAME (Secrets Manager)
+    3. Fallback to empty string (skip DB updates)
+    """
+    url = os.getenv("DATABASE_URL", "")
+    if url and "PLACEHOLDER" not in url:
+        # Ensure sync driver for psycopg2
+        url = url.replace("postgresql+asyncpg://", "postgresql://")
+        if not url.startswith("postgresql://"):
+            url = "postgresql://" + url.split("://", 1)[-1]
+        return url
+
+    secret_arn = os.getenv("RDS_SECRET_ARN")
+    endpoint = os.getenv("RDS_ENDPOINT")
+    db_name = os.getenv("RDS_DB_NAME")
+
+    if secret_arn and endpoint and db_name:
+        try:
+            client = boto3.client("secretsmanager", region_name=os.getenv("AWS_REGION", "us-east-1"))
+            response = client.get_secret_value(SecretId=secret_arn)
+            secret = json.loads(response["SecretString"])
+            username = secret.get("username", "digestor")
+            password = secret.get("password", "")
+            built = f"postgresql://{username}:{password}@{endpoint}:5432/{db_name}"
+            print(f"[DB] Resolved DATABASE_URL from Secrets Manager (endpoint={endpoint}, db={db_name})")
+            return built
+        except Exception as e:
+            print(f"[DB] Failed to resolve DATABASE_URL from Secrets Manager: {e}")
+
+    return ""
+
+
+# Resolve once at import time so all functions can use it
+_DATABASE_URL = _resolve_database_url()
+
+
 def _get_fallback_status(document_id):
     """Check if a document already has PDF.js results saved (fallback path).
     If it does, return 'complete' so those results are shown instead of an error.
     Otherwise return 'failed'."""
     if not document_id:
         return "failed"
-    db_url = os.getenv('DATABASE_URL', '')
+    db_url = _DATABASE_URL
     if not db_url:
         return "failed"
-    sync_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
+    sync_url = db_url
     try:
         import psycopg2
         conn = psycopg2.connect(sync_url)
@@ -50,12 +88,11 @@ def update_document_status(document_id, status, results=None, confidence_avg=Non
     if not document_id:
         print("[DB] No document_id provided, skipping DB status update")
         return
-    db_url = os.getenv('DATABASE_URL', '')
+    db_url = _DATABASE_URL
     if not db_url:
         print("[DB] No DATABASE_URL set, skipping DB status update")
         return
-    # Convert async URL to sync for psycopg2
-    sync_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
+    sync_url = db_url
     try:
         import psycopg2
         import psycopg2.extras
